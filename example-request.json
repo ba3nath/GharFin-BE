@@ -1,0 +1,273 @@
+{
+  "assetClasses": {
+    "largeCap": {
+      "3Y": {
+        "avgReturnPct": 12.0,
+        "probNegativeYearPct": 22,
+        "expectedShortfallPct": -18,
+        "maxDrawdownPct": -35,
+        "volatilityPct": 20.0
+      },
+      "5Y": {
+        "avgReturnPct": 11.5,
+        "probNegativeYearPct": 20,
+        "expectedShortfallPct": -17,
+        "maxDrawdownPct": -32,
+        "volatilityPct": 18.0
+      },
+      "10Y": {
+        "avgReturnPct": 11.0,
+        "probNegativeYearPct": 18,
+        "expectedShortfallPct": -15,
+        "maxDrawdownPct": -28,
+        "volatilityPct": 15.0
+      }
+    },
+    "midCap": {
+      "3Y": {
+        "avgReturnPct": 15.0,
+        "probNegativeYearPct": 26,
+        "expectedShortfallPct": -24,
+        "maxDrawdownPct": -45,
+        "volatilityPct": 26.0
+      },
+      "5Y": {
+        "avgReturnPct": 14.0,
+        "probNegativeYearPct": 24,
+        "expectedShortfallPct": -22,
+        "maxDrawdownPct": -42,
+        "volatilityPct": 23.0
+      },
+      "10Y": {
+        "avgReturnPct": 13.0,
+        "probNegativeYearPct": 22,
+        "expectedShortfallPct": -20,
+        "maxDrawdownPct": -38,
+        "volatilityPct": 20.0
+      }
+    },
+    "smallCap": {
+      "3Y": {
+        "avgReturnPct": 18.0,
+        "probNegativeYearPct": 30,
+        "expectedShortfallPct": -32,
+        "maxDrawdownPct": -55,
+        "volatilityPct": 30.0
+      },
+      "5Y": {
+        "avgReturnPct": 17.0,
+        "probNegativeYearPct": 28,
+        "expectedShortfallPct": -30,
+        "maxDrawdownPct": -50,
+        "volatilityPct": 27.0
+      },
+      "10Y": {
+        "avgReturnPct": 15.5,
+        "probNegativeYearPct": 26,
+        "expectedShortfallPct": -28,
+        "maxDrawdownPct": -45,
+        "volatilityPct": 24.0
+      }
+    },
+    "microCap": {
+      "3Y": {
+        "avgReturnPct": 20.0,
+        "probNegativeYearPct": 34,
+        "expectedShortfallPct": -40,
+        "maxDrawdownPct": -65,
+        "volatilityPct": 34.0
+      },
+      "5Y": {
+        "avgReturnPct": 18.5,
+        "probNegativeYearPct": 32,
+        "expectedShortfallPct": -38,
+        "maxDrawdownPct": -60,
+        "volatilityPct": 31.0
+      },
+      "10Y": {
+        "avgReturnPct": 17.0,
+        "probNegativeYearPct": 30,
+        "expectedShortfallPct": -35,
+        "maxDrawdownPct": -55,
+        "volatilityPct": 28.0
+      }
+    },
+    "flexiCap": {
+      "3Y": {
+        "avgReturnPct": 13.5,
+        "probNegativeYearPct": 24,
+        "expectedShortfallPct": -20,
+        "maxDrawdownPct": -38,
+        "volatilityPct": 22.0
+      },
+      "5Y": {
+        "avgReturnPct": 13.0,
+        "probNegativeYearPct": 22,
+        "expectedShortfallPct": -18,
+        "maxDrawdownPct": -35,
+        "volatilityPct": 20.0
+      },
+      "10Y": {
+        "avgReturnPct": 12.5,
+        "probNegativeYearPct": 20,
+        "expectedShortfallPct": -16,
+        "maxDrawdownPct": -32,
+        "volatilityPct": 18.0
+      }
+    },
+    "gold": {
+      "3Y": {
+        "avgReturnPct": 9.0,
+        "probNegativeYearPct": 28,
+        "expectedShortfallPct": -15,
+        "maxDrawdownPct": -25,
+        "volatilityPct": 16.0
+      },
+      "5Y": {
+        "avgReturnPct": 8.5,
+        "probNegativeYearPct": 26,
+        "expectedShortfallPct": -14,
+        "maxDrawdownPct": -22,
+        "volatilityPct": 13.0
+      },
+      "10Y": {
+        "avgReturnPct": 8.0,
+        "probNegativeYearPct": 24,
+        "expectedShortfallPct": -12,
+        "maxDrawdownPct": -20,
+        "volatilityPct": 11.0
+      }
+    },
+    "bond": {
+      "3Y": {
+        "avgReturnPct": 6.5,
+        "probNegativeYearPct": 0,
+        "expectedShortfallPct": 0,
+        "maxDrawdownPct": 0,
+        "volatilityPct": 7.0
+      },
+      "5Y": {
+        "avgReturnPct": 6.8,
+        "probNegativeYearPct": 0,
+        "expectedShortfallPct": 0,
+        "maxDrawdownPct": 0,
+        "volatilityPct": 5.5
+      },
+      "10Y": {
+        "avgReturnPct": 7.0,
+        "probNegativeYearPct": 0,
+        "expectedShortfallPct": 0,
+        "maxDrawdownPct": 0,
+        "volatilityPct": 4.5
+      }
+    }
+  },
+  "customerProfile": {
+    "asOfDate": "2026-01-01",
+    "totalNetWorth": 8500000,
+    "corpus": {
+      "byAssetClass": {
+        "largeCap": 2200000,
+        "midCap": 1400000,
+        "smallCap": 900000,
+        "microCap": 500000,
+        "flexiCap": 800000,
+        "gold": 700000,
+        "bond": 1000000,
+        "cash": 1000000
+      },
+      "allowedAssetClasses": [
+        "largeCap",
+        "midCap",
+        "smallCap",
+        "microCap",
+        "flexiCap",
+        "gold",
+        "bond",
+        "cash"
+      ]
+    }
+  },
+  "goals": {
+    "goals": [
+      {
+        "goalId": "medical_corpus",
+        "goalName": "Medical / Health Corpus",
+        "priority": 1,
+        "horizonYears": 5,
+        "amountVariancePct": 0,
+        "tiers": {
+          "basic": {
+            "targetAmount": 5000000
+          },
+          "ambitious": {
+            "targetAmount": 7000000
+          }
+        }
+      },
+      {
+        "goalId": "car_purchase",
+        "goalName": "Car Purchase",
+        "priority": 2,
+        "horizonYears": 3,
+        "amountVariancePct": 10,
+        "tiers": {
+          "basic": {
+            "targetAmount": 1200000
+          },
+          "ambitious": {
+            "targetAmount": 2000000
+          }
+        }
+      },
+      {
+        "goalId": "home_upgrade",
+        "goalName": "Home Purchase / Upgrade",
+        "priority": 3,
+        "horizonYears": 8,
+        "amountVariancePct": 15,
+        "tiers": {
+          "basic": {
+            "targetAmount": 6000000
+          },
+          "ambitious": {
+            "targetAmount": 10000000
+          }
+        }
+      },
+      {
+        "goalId": "child_education",
+        "goalName": "Child Higher Education",
+        "priority": 4,
+        "horizonYears": 12,
+        "amountVariancePct": 15,
+        "tiers": {
+          "basic": {
+            "targetAmount": 5000000
+          },
+          "ambitious": {
+            "targetAmount": 8000000
+          }
+        }
+      },
+      {
+        "goalId": "retirement",
+        "goalName": "Retirement",
+        "priority": 5,
+        "horizonYears": 25,
+        "amountVariancePct": 20,
+        "tiers": {
+          "basic": {
+            "targetAmount": 30000000
+          },
+          "ambitious": {
+            "targetAmount": 50000000
+          }
+        }
+      }
+    ]
+  },
+  "monthlySIP": 100000,
+  "stretchSIPPercent": 20,
+  "annualStepUpPercent": 10
+}

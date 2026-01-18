@@ -1,0 +1,296 @@
+{
+  "customerProfile": {
+    "asOfDate": "2024-01-01",
+    "totalNetWorth": 8000000,
+    "corpus": {
+      "byAssetClass": {
+        "largeCap": 2400000,
+        "midCap": 1600000,
+        "smallCap": 1300000,
+        "microCap": 800000,
+        "flexiCap": 1000000,
+        "gold": 500000,
+        "bond": 300000,
+        "cash": 100000
+      },
+      "allowedAssetClasses": [
+        "largeCap",
+        "midCap",
+        "smallCap",
+        "microCap",
+        "flexiCap",
+        "gold",
+        "bond",
+        "cash"
+      ]
+    }
+  },
+  "goals": {
+    "goals": [
+      {
+        "goalId": "medical_corpus",
+        "goalName": "Medical / Health Corpus",
+        "priority": 1,
+        "horizonYears": 5,
+        "amountVariancePct": 0,
+        "tiers": {
+          "basic": {
+            "targetAmount": 5000000
+          },
+        "ambitious": {
+          "targetAmount": 12000000
+        }
+        }
+      },
+      {
+        "goalId": "car_purchase",
+        "goalName": "Car Purchase",
+        "priority": 2,
+        "horizonYears": 3,
+        "amountVariancePct": 10,
+        "tiers": {
+          "basic": {
+            "targetAmount": 1200000
+          },
+        "ambitious": {
+          "targetAmount": 3000000
+        }
+        }
+      },
+      {
+        "goalId": "home_upgrade",
+        "goalName": "Home Purchase / Upgrade",
+        "priority": 3,
+        "horizonYears": 8,
+        "amountVariancePct": 15,
+        "tiers": {
+          "basic": {
+            "targetAmount": 6000000
+          },
+        "ambitious": {
+          "targetAmount": 30000000
+        }
+        }
+      },
+      {
+        "goalId": "child_education",
+        "goalName": "Child Higher Education",
+        "priority": 4,
+        "horizonYears": 12,
+        "amountVariancePct": 15,
+        "tiers": {
+          "basic": {
+            "targetAmount": 5000000
+          },
+          "ambitious": {
+            "targetAmount": 8000000
+          }
+        }
+      },
+      {
+        "goalId": "retirement",
+        "goalName": "Retirement",
+        "priority": 5,
+        "horizonYears": 20,
+        "amountVariancePct": 20,
+        "tiers": {
+          "basic": {
+            "targetAmount": 30000000
+          },
+        "ambitious": {
+          "targetAmount": 80000000
+        }
+        }
+      }
+    ]
+  },
+  "monthlySIP": 100000,
+  "stretchSIPPercent": 20,
+  "annualStepUpPercent": 10,
+  "assetClasses": {
+    "largeCap": {
+      "3Y": {
+        "avgReturnPct": 12,
+        "volatilityPct": 15,
+        "probNegativeYearPct": 20,
+        "expectedShortfallPct": -15,
+        "maxDrawdownPct": -30
+      },
+      "5Y": {
+        "avgReturnPct": 13,
+        "volatilityPct": 16,
+        "probNegativeYearPct": 18,
+        "expectedShortfallPct": -14,
+        "maxDrawdownPct": -28
+      },
+      "10Y": {
+        "avgReturnPct": 14,
+        "volatilityPct": 17,
+        "probNegativeYearPct": 15,
+        "expectedShortfallPct": -13,
+        "maxDrawdownPct": -25
+      }
+    },
+    "midCap": {
+      "3Y": {
+        "avgReturnPct": 14,
+        "volatilityPct": 18,
+        "probNegativeYearPct": 22,
+        "expectedShortfallPct": -18,
+        "maxDrawdownPct": -35
+      },
+      "5Y": {
+        "avgReturnPct": 15,
+        "volatilityPct": 19,
+        "probNegativeYearPct": 20,
+        "expectedShortfallPct": -17,
+        "maxDrawdownPct": -32
+      },
+      "10Y": {
+        "avgReturnPct": 16,
+        "volatilityPct": 20,
+        "probNegativeYearPct": 18,
+        "expectedShortfallPct": -16,
+        "maxDrawdownPct": -30
+      }
+    },
+    "smallCap": {
+      "3Y": {
+        "avgReturnPct": 16,
+        "volatilityPct": 22,
+        "probNegativeYearPct": 25,
+        "expectedShortfallPct": -22,
+        "maxDrawdownPct": -40
+      },
+      "5Y": {
+        "avgReturnPct": 17,
+        "volatilityPct": 23,
+        "probNegativeYearPct": 23,
+        "expectedShortfallPct": -21,
+        "maxDrawdownPct": -38
+      },
+      "10Y": {
+        "avgReturnPct": 18,
+        "volatilityPct": 24,
+        "probNegativeYearPct": 20,
+        "expectedShortfallPct": -20,
+        "maxDrawdownPct": -35
+      }
+    },
+    "microCap": {
+      "3Y": {
+        "avgReturnPct": 18,
+        "volatilityPct": 25,
+        "probNegativeYearPct": 28,
+        "expectedShortfallPct": -25,
+        "maxDrawdownPct": -45
+      },
+      "5Y": {
+        "avgReturnPct": 19,
+        "volatilityPct": 26,
+        "probNegativeYearPct": 26,
+        "expectedShortfallPct": -24,
+        "maxDrawdownPct": -42
+      },
+      "10Y": {
+        "avgReturnPct": 20,
+        "volatilityPct": 27,
+        "probNegativeYearPct": 23,
+        "expectedShortfallPct": -23,
+        "maxDrawdownPct": -40
+      }
+    },
+    "flexiCap": {
+      "3Y": {
+        "avgReturnPct": 13,
+        "volatilityPct": 16,
+        "probNegativeYearPct": 21,
+        "expectedShortfallPct": -16,
+        "maxDrawdownPct": -32
+      },
+      "5Y": {
+        "avgReturnPct": 14,
+        "volatilityPct": 17,
+        "probNegativeYearPct": 19,
+        "expectedShortfallPct": -15,
+        "maxDrawdownPct": -30
+      },
+      "10Y": {
+        "avgReturnPct": 15,
+        "volatilityPct": 18,
+        "probNegativeYearPct": 17,
+        "expectedShortfallPct": -14,
+        "maxDrawdownPct": -28
+      }
+    },
+    "gold": {
+      "3Y": {
+        "avgReturnPct": 8,
+        "volatilityPct": 12,
+        "probNegativeYearPct": 30,
+        "expectedShortfallPct": -10,
+        "maxDrawdownPct": -20
+      },
+      "5Y": {
+        "avgReturnPct": 9,
+        "volatilityPct": 13,
+        "probNegativeYearPct": 28,
+        "expectedShortfallPct": -9,
+        "maxDrawdownPct": -18
+      },
+      "10Y": {
+        "avgReturnPct": 10,
+        "volatilityPct": 14,
+        "probNegativeYearPct": 25,
+        "expectedShortfallPct": -8,
+        "maxDrawdownPct": -16
+      }
+    },
+    "bond": {
+      "3Y": {
+        "avgReturnPct": 7,
+        "volatilityPct": 5,
+        "probNegativeYearPct": 15,
+        "expectedShortfallPct": -3,
+        "maxDrawdownPct": -8
+      },
+      "5Y": {
+        "avgReturnPct": 7.5,
+        "volatilityPct": 5.5,
+        "probNegativeYearPct": 14,
+        "expectedShortfallPct": -2.5,
+        "maxDrawdownPct": -7
+      },
+      "10Y": {
+        "avgReturnPct": 8,
+        "volatilityPct": 6,
+        "probNegativeYearPct": 12,
+        "expectedShortfallPct": -2,
+        "maxDrawdownPct": -6
+      }
+    },
+    "cash": {
+      "3Y": {
+        "avgReturnPct": 4,
+        "volatilityPct": 0.1,
+        "probNegativeYearPct": 0,
+        "expectedShortfallPct": 0,
+        "maxDrawdownPct": 0
+      },
+      "5Y": {
+        "avgReturnPct": 4,
+        "volatilityPct": 0.1,
+        "probNegativeYearPct": 0,
+        "expectedShortfallPct": 0,
+        "maxDrawdownPct": 0
+      },
+      "10Y": {
+        "avgReturnPct": 4,
+        "volatilityPct": 0.1,
+        "probNegativeYearPct": 0,
+        "expectedShortfallPct": 0,
+        "maxDrawdownPct": 0
+      }
+    }
+  }
+}
