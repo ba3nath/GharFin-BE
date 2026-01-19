@@ -19,12 +19,11 @@ describe('Exact 90% Confidence Test', () => {
     const goal: Goal = {
       goalId: 'test-goal-90',
       goalName: 'Test Goal 90% Confidence',
-      priority: 1,
       horizonYears: 5,
       amountVariancePct: 0,
       tiers: {
-        basic: { targetAmount: 5000000 }, // ₹50L target
-        ambitious: { targetAmount: 5000000 },
+        basic: { targetAmount: 5000000, priority: 1 }, // ₹50L target
+        ambitious: { targetAmount: 5000000, priority: 2 },
       },
     };
 

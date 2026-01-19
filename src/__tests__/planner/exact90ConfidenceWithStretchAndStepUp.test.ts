@@ -84,12 +84,11 @@ describe('Exact 90% Confidence Test with Stretch SIP and Step-up', () => {
     const goal: Goal = {
       goalId: 'test-goal-90-stretch-stepup',
       goalName: 'Test Goal 90% Confidence with Stretch and Step-up',
-      priority: 1,
       horizonYears: 5,
       amountVariancePct: 0,
       tiers: {
-        basic: { targetAmount: 5000000 }, // ₹50L target
-        ambitious: { targetAmount: 5000000 },
+        basic: { targetAmount: 5000000, priority: 1 }, // ₹50L target
+        ambitious: { targetAmount: 5000000, priority: 2 },
       },
     };
 

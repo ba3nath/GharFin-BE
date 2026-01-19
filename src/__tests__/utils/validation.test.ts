@@ -95,19 +95,43 @@ describe('CustomerProfileSchema', () => {
 });
 
 describe('GoalSchema', () => {
-  it('should validate valid goal', () => {
+  it('should validate valid goal with tier-level priorities', () => {
     const result = GoalSchema.safeParse(singleGoal);
     expect(result.success).toBe(true);
   });
 
-  it('should reject invalid priority (non-integer)', () => {
-    const invalid = { ...singleGoal, priority: 1.5 };
+  it('should reject goal with missing tier priority', () => {
+    const invalid = {
+      ...singleGoal,
+      tiers: {
+        basic: { targetAmount: 5000000 },
+        ambitious: { targetAmount: 8000000, priority: 2 }
+      }
+    };
     const result = GoalSchema.safeParse(invalid);
     expect(result.success).toBe(false);
   });
 
-  it('should reject invalid priority (<1)', () => {
-    const invalid = { ...singleGoal, priority: 0 };
+  it('should reject tier with invalid priority (non-integer)', () => {
+    const invalid = {
+      ...singleGoal,
+      tiers: {
+        basic: { targetAmount: 5000000, priority: 1.5 },
+        ambitious: { targetAmount: 8000000, priority: 2 }
+      }
+    };
+    const result = GoalSchema.safeParse(invalid);
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject tier with invalid priority (<1)', () => {
+    const invalid = {
+      ...singleGoal,
+      tiers: {
+        basic: { targetAmount: 5000000, priority: 0 },
+        ambitious: { targetAmount: 8000000, priority: 2 }
+      }
+    };
     const result = GoalSchema.safeParse(invalid);
     expect(result.success).toBe(false);
   });

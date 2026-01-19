@@ -63,12 +63,11 @@ describe('Method Comparison Tests', () => {
       {
         goalId: 'retirement',
         goalName: 'Retirement',
-        priority: 1,
         horizonYears: 10,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 5000000 }, // 50L target
-          ambitious: { targetAmount: 7000000 },
+          basic: { targetAmount: 5000000, priority: 1 }, // 50L target
+          ambitious: { targetAmount: 7000000, priority: 2 },
         },
       },
     ];
@@ -228,12 +227,11 @@ describe('Method Comparison Tests', () => {
       {
         goalId: 'retirement',
         goalName: 'Retirement',
-        priority: 1,
         horizonYears: 10,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 6000000 }, // 60L target
-          ambitious: { targetAmount: 9000000 },
+          basic: { targetAmount: 6000000, priority: 1 }, // 60L target
+          ambitious: { targetAmount: 9000000, priority: 2 },
         },
       },
     ];

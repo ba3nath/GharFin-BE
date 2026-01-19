@@ -42,23 +42,21 @@ describe('Corpus Redistribution Test', () => {
     {
       goalId: 'retirement',
       goalName: 'Retirement',
-      priority: 1,
       horizonYears: 10,
       amountVariancePct: 5,
       tiers: {
-        basic: { targetAmount: 8000000 }, // 80L target - very high
-        ambitious: { targetAmount: 12000000 },
+        basic: { targetAmount: 8000000, priority: 1 }, // 80L target - very high
+        ambitious: { targetAmount: 12000000, priority: 2 },
       },
     },
     {
       goalId: 'child_education',
       goalName: 'Child Education',
-      priority: 2,
       horizonYears: 8,
       amountVariancePct: 5,
       tiers: {
-        basic: { targetAmount: 5000000 }, // 50L target - very high
-        ambitious: { targetAmount: 7000000 },
+        basic: { targetAmount: 5000000, priority: 2 }, // 50L target - very high
+        ambitious: { targetAmount: 7000000, priority: 3 },
       },
     },
   ];

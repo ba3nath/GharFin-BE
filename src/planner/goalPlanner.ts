@@ -1,5 +1,5 @@
 import { CustomerProfile, getTotalCorpus } from "../models/CustomerProfile";
-import { Goal, sortGoalsByPriority, getGoalTarget } from "../models/Goal";
+import { Goal, getBasicTiersSorted, getGoalTarget } from "../models/Goal";
 import { AssetClasses, getAssetClassData, AssetClassData } from "../models/AssetClass";
 import {
   calculatePortfolioEnvelopeBounds,
@@ -99,8 +99,8 @@ export class GoalPlanner {
   planMethod1(maxIterations: number = 20): Method1Result {
     const { assetClasses, customerProfile, goals, sipInput } = this.context;
 
-    // Sort goals by priority
-    const sortedGoals = sortGoalsByPriority(goals);
+    // Sort goals by basic tier priority
+    const sortedGoals = getBasicTiersSorted(goals);
 
     // Separate goals by horizon (< 3 years = short-term, SIP = 0; >= 3 years = long-term)
     const shortTermGoals = sortedGoals.filter((g) => g.horizonYears < 3);
@@ -306,8 +306,8 @@ export class GoalPlanner {
       }
     }
 
-    // Sort goals by priority
-    const sortedGoals = sortGoalsByPriority(goals);
+    // Sort goals by basic tier priority
+    const sortedGoals = getBasicTiersSorted(goals);
 
     // Separate goals by horizon (< 3 years = short-term, SIP = 0; >= 3 years = long-term)
     const shortTermGoals = sortedGoals.filter((g) => g.horizonYears < 3);
@@ -519,8 +519,8 @@ export class GoalPlanner {
       }
     }
 
-    // Sort goals by priority
-    const sortedGoals = sortGoalsByPriority(goals);
+    // Sort goals by basic tier priority
+    const sortedGoals = getBasicTiersSorted(goals);
 
     // Separate goals by horizon
     const longTermGoals = sortedGoals.filter((g) => g.horizonYears >= 3);
@@ -1259,8 +1259,8 @@ export class GoalPlanner {
       return { totalSIP, allocations };
     }
 
-    // Calculate weights based on goal priority and horizon
-    const weights: number[] = ambitiousGoals.map((g) => 1 / g.priority);
+    // Calculate weights based on ambitious tier priority
+    const weights: number[] = ambitiousGoals.map((g) => 1 / g.tiers.ambitious.priority);
     const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
     for (let i = 0; i < ambitiousGoals.length; i++) {
@@ -1732,8 +1732,8 @@ export class GoalPlanner {
       return { totalSIP, allocations };
     }
 
-    // Calculate weights based on goal priority and horizon
-    const weights: number[] = ambitiousGoals.map((g) => 1 / g.priority);
+    // Calculate weights based on ambitious tier priority
+    const weights: number[] = ambitiousGoals.map((g) => 1 / g.tiers.ambitious.priority);
     const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
     for (let i = 0; i < ambitiousGoals.length; i++) {

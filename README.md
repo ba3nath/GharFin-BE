@@ -1,6 +1,6 @@
 # Goal-Based SIP Optimization System
 
-A Node.js REST API that implements the envelope method for SIP projection with Monte Carlo lite validation. The system optimizes monthly SIP allocation across multiple financial goals, ensuring 90% confidence for basic tier goals before allocating remaining SIP to ambitious tiers.
+A Node.js REST API that implements the envelope method for SIP projection with Monte Carlo lite validation. The system optimizes monthly SIP allocation across multiple financial goals, ensuring 90% confidence for basic tier goals before allocating remaining SIP to ambitious tiers. Priorities are defined at the tier level, allowing flexible goal ordering (e.g., an ambitious tier of one goal can have higher priority than the basic tier of another goal).
 
 ## Features
 
@@ -10,7 +10,7 @@ A Node.js REST API that implements the envelope method for SIP projection with M
   - **Method 1**: Calculate SIP allocation with current corpus allocation
   - **Method 2**: Rebalance entire corpus to match optimal SIP allocation ratio, then recalculate
   - **Method 3**: Iterative corpus rebalancing: Calculate SIP with corpus=0, rebalance corpus to match SIP allocation, iterate until convergence
-- **Goal Prioritization**: Process goals by priority, securing basic tiers first
+- **Tier-Level Prioritization**: Each tier (basic/ambitious) has its own priority, allowing flexible goal ordering (e.g., ambitious tier of one goal can have higher priority than basic tier of another goal)
 - **Time-Based Asset Allocation**: Dynamic shift to bonds in last 12 months for basic goals
 - **Sharpe Ratio Optimization**: Optimize remaining SIP for ambitious goals
 
@@ -57,12 +57,33 @@ Calculate SIP allocation with current corpus allocation.
 {
   "assetClasses": { ... },
   "customerProfile": { ... },
-  "goals": { ... },
+  "goals": {
+    "goals": [
+      {
+        "goalId": "goal1",
+        "goalName": "Example Goal",
+        "horizonYears": 10,
+        "amountVariancePct": 5,
+        "tiers": {
+          "basic": {
+            "targetAmount": 5000000,
+            "priority": 1
+          },
+          "ambitious": {
+            "targetAmount": 8000000,
+            "priority": 2
+          }
+        }
+      }
+    ]
+  },
   "monthlySIP": 50000,
   "stretchSIPPercent": 20,
   "annualStepUpPercent": 10
 }
 ```
+
+**Note:** Each tier (basic/ambitious) has its own `priority` field. Lower numbers indicate higher priority. Basic tier priorities are used for SIP allocation order and corpus allocation. Ambitious tier priorities are used for distributing remaining SIP after basic tiers achieve 90% confidence.
 
 See `example-request.json` for a complete example.
 

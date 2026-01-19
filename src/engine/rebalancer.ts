@@ -1,4 +1,5 @@
 import { CustomerProfile } from "../models/CustomerProfile";
+import { Goal } from "../models/Goal";
 import { AssetAllocation } from "./portfolio";
 import { getTotalCorpus } from "../models/CustomerProfile";
 
@@ -92,15 +93,16 @@ export function getRebalancedCorpusAllocation(
  * Optimizes corpus allocation across multiple goals based on priority and requirements.
  * Uses a greedy allocation strategy: allocates corpus to goals in priority order,
  * distributing proportionally from available corpus by asset class.
+ * Uses basic tier priority for sorting (since corpus is allocated for basic tiers).
  * 
  * @param profile - Customer profile with available corpus
- * @param goals - Array of goals with priority and horizon information
+ * @param goals - Array of goals (should be pre-sorted by basic tier priority)
  * @param goalCorpusRequirements - Map of goal IDs to their required corpus amounts
  * @returns Map of goal IDs to their corpus allocations by asset class
  */
 export function optimizeCorpusAllocation(
   profile: CustomerProfile,
-  goals: Array<{ goalId: string; priority: number; horizonYears: number }>,
+  goals: Goal[],
   goalCorpusRequirements: Record<string, number> // goalId -> required corpus
 ): Record<string, Record<string, number>> {
   // goalId -> assetClass -> amount
@@ -109,8 +111,8 @@ export function optimizeCorpusAllocation(
   const totalCorpus = getTotalCorpus(profile);
   const corpusByAssetClass = { ...profile.corpus.byAssetClass };
 
-  // Sort goals by priority
-  const sortedGoals = [...goals].sort((a, b) => a.priority - b.priority);
+  // Sort goals by basic tier priority (for corpus allocation, we use basic tier priority)
+  const sortedGoals = [...goals].sort((a, b) => a.tiers.basic.priority - b.tiers.basic.priority);
 
   // Allocate corpus to goals based on priority and requirements
   for (const goal of sortedGoals) {

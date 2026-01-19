@@ -59,15 +59,16 @@ export const CustomerProfileSchema = z.object({
  */
 export const GoalTierSchema = z.object({
   targetAmount: z.number().min(0),
+  priority: z.number().int().min(1),
 });
 
 /**
- * Schema for a financial goal with priority, horizon, and tier targets.
+ * Schema for a financial goal with horizon and tier targets.
+ * Priority is now at the tier level, not at the goal level.
  */
 export const GoalSchema = z.object({
   goalId: z.string(),
   goalName: z.string(),
-  priority: z.number().int().min(1),
   horizonYears: z.number().min(0),
   amountVariancePct: z.number().min(0).max(100),
   tiers: z.object({

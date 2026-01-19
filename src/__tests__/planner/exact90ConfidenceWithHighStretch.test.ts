@@ -75,12 +75,11 @@ describe('Exact 90% Confidence Test with High Stretch SIP', () => {
     const goal: Goal = {
       goalId: 'test-goal-90-high-stretch-20',
       goalName: 'Test Goal 90% Confidence with 20% Stretch',
-      priority: 1,
       horizonYears: 5,
       amountVariancePct: 0,
       tiers: {
-        basic: { targetAmount: 5000000 }, // ₹50L target
-        ambitious: { targetAmount: 5000000 },
+        basic: { targetAmount: 5000000, priority: 1 }, // ₹50L target
+        ambitious: { targetAmount: 5000000, priority: 2 },
       },
     };
 
@@ -311,12 +310,11 @@ describe('Exact 90% Confidence Test with High Stretch SIP', () => {
     const goal: Goal = {
       goalId: 'test-goal-90-high-stretch-30',
       goalName: 'Test Goal 90% Confidence with 30% Stretch',
-      priority: 1,
       horizonYears: 5,
       amountVariancePct: 0,
       tiers: {
-        basic: { targetAmount: 5000000 },
-        ambitious: { targetAmount: 5000000 },
+        basic: { targetAmount: 5000000, priority: 1 },
+        ambitious: { targetAmount: 5000000, priority: 2 },
       },
     };
 

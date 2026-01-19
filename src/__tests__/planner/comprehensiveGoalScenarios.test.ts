@@ -38,23 +38,21 @@ describe('Comprehensive Goal Scenarios', () => {
       {
         goalId: 'early_high_priority',
         goalName: 'Early High Priority Goal',
-        priority: 1,
         horizonYears: 3,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 2000000 },
-          ambitious: { targetAmount: 2500000 },
+          basic: { targetAmount: 2000000, priority: 1 },
+          ambitious: { targetAmount: 2500000, priority: 2 },
         },
       },
       {
         goalId: 'late_low_priority',
         goalName: 'Late Low Priority Goal',
-        priority: 2,
         horizonYears: 10,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 8000000 },
-          ambitious: { targetAmount: 10000000 },
+          basic: { targetAmount: 8000000, priority: 2 },
+          ambitious: { targetAmount: 10000000, priority: 3 },
         },
       },
     ];
@@ -174,23 +172,21 @@ describe('Comprehensive Goal Scenarios', () => {
       {
         goalId: 'early_high_priority',
         goalName: 'Early High Priority Goal',
-        priority: 1,
         horizonYears: 3,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 2000000 },
-          ambitious: { targetAmount: 2500000 },
+          basic: { targetAmount: 2000000, priority: 1 },
+          ambitious: { targetAmount: 2500000, priority: 2 },
         },
       },
       {
         goalId: 'late_low_priority_unachievable',
         goalName: 'Late Low Priority Unachievable Goal',
-        priority: 2,
         horizonYears: 10,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 50000000 }, // Very high target
-          ambitious: { targetAmount: 60000000 },
+          basic: { targetAmount: 50000000, priority: 2 }, // Very high target
+          ambitious: { targetAmount: 60000000, priority: 3 },
         },
       },
     ];
@@ -278,23 +274,21 @@ describe('Comprehensive Goal Scenarios', () => {
       {
         goalId: 'late_high_priority',
         goalName: 'Late High Priority Goal',
-        priority: 1,
         horizonYears: 10,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 15000000 }, // Large target that might be partially met
-          ambitious: { targetAmount: 20000000 },
+          basic: { targetAmount: 15000000, priority: 1 }, // Large target that might be partially met
+          ambitious: { targetAmount: 20000000, priority: 2 },
         },
       },
       {
         goalId: 'early_low_priority',
         goalName: 'Early Low Priority Goal',
-        priority: 2,
         horizonYears: 3,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 1500000 },
-          ambitious: { targetAmount: 2000000 },
+          basic: { targetAmount: 1500000, priority: 2 },
+          ambitious: { targetAmount: 2000000, priority: 3 },
         },
       },
     ];
@@ -379,45 +373,41 @@ describe('Comprehensive Goal Scenarios', () => {
       {
         goalId: 'goal1_early_high',
         goalName: 'Early High Priority',
-        priority: 1,
         horizonYears: 2, // Short-term (will use corpus only, no SIP)
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 1000000 },
-          ambitious: { targetAmount: 1000000 },
+          basic: { targetAmount: 1000000, priority: 1 },
+          ambitious: { targetAmount: 1000000, priority: 2 },
         },
       },
       {
         goalId: 'goal2_mid_high',
         goalName: 'Mid High Priority',
-        priority: 1,
         horizonYears: 5,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 5000000 },
-          ambitious: { targetAmount: 7000000 },
+          basic: { targetAmount: 5000000, priority: 1 },
+          ambitious: { targetAmount: 7000000, priority: 2 },
         },
       },
       {
         goalId: 'goal3_late_medium',
         goalName: 'Late Medium Priority',
-        priority: 2,
         horizonYears: 10,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 12000000 },
-          ambitious: { targetAmount: 15000000 },
+          basic: { targetAmount: 12000000, priority: 2 },
+          ambitious: { targetAmount: 15000000, priority: 3 },
         },
       },
       {
         goalId: 'goal4_late_low',
         goalName: 'Late Low Priority Unachievable',
-        priority: 3,
         horizonYears: 8,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 30000000 }, // Very high - might not be met
-          ambitious: { targetAmount: 40000000 },
+          basic: { targetAmount: 30000000, priority: 3 }, // Very high - might not be met
+          ambitious: { targetAmount: 40000000, priority: 4 },
         },
       },
     ];
@@ -481,7 +471,7 @@ describe('Comprehensive Goal Scenarios', () => {
       const result = planner.planMethod1();
 
       // Goals should be sorted by priority
-      const sortedGoals = [...goals].sort((a, b) => a.priority - b.priority);
+      const sortedGoals = [...goals].sort((a, b) => a.tiers.basic.priority - b.tiers.basic.priority);
 
       // Verify corpus allocation exists for all goals
       sortedGoals.forEach((goal) => {
@@ -550,12 +540,11 @@ describe('Comprehensive Goal Scenarios', () => {
       {
         goalId: 'partially_met_goal',
         goalName: 'Partially Met Goal',
-        priority: 1,
         horizonYears: 5,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 8000000 }, // Target that requires more resources than available
-          ambitious: { targetAmount: 10000000 },
+          basic: { targetAmount: 8000000, priority: 1 }, // Target that requires more resources than available
+          ambitious: { targetAmount: 10000000, priority: 2 },
         },
       },
     ];
@@ -611,12 +600,11 @@ describe('Comprehensive Goal Scenarios', () => {
       {
         goalId: 'cannot_be_met',
         goalName: 'Cannot Be Met Goal',
-        priority: 1,
         horizonYears: 5,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 100000000 }, // Extremely high target
-          ambitious: { targetAmount: 150000000 },
+          basic: { targetAmount: 100000000, priority: 1 }, // Extremely high target
+          ambitious: { targetAmount: 150000000, priority: 2 },
         },
       },
     ];
@@ -691,23 +679,21 @@ describe('Comprehensive Goal Scenarios', () => {
       {
         goalId: 'early_low_priority',
         goalName: 'Early Low Priority',
-        priority: 3,
         horizonYears: 2, // Short-term
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 1500000 },
-          ambitious: { targetAmount: 1500000 },
+          basic: { targetAmount: 1500000, priority: 3 },
+          ambitious: { targetAmount: 1500000, priority: 4 },
         },
       },
       {
         goalId: 'late_high_priority',
         goalName: 'Late High Priority',
-        priority: 1,
         horizonYears: 10,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 10000000 },
-          ambitious: { targetAmount: 12000000 },
+          basic: { targetAmount: 10000000, priority: 1 },
+          ambitious: { targetAmount: 12000000, priority: 2 },
         },
       },
     ];
@@ -766,23 +752,21 @@ describe('Comprehensive Goal Scenarios', () => {
       {
         goalId: 'achievable1',
         goalName: 'Achievable Goal 1',
-        priority: 1,
         horizonYears: 5,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 3000000 },
-          ambitious: { targetAmount: 4000000 },
+          basic: { targetAmount: 3000000, priority: 1 },
+          ambitious: { targetAmount: 4000000, priority: 2 },
         },
       },
       {
         goalId: 'achievable2',
         goalName: 'Achievable Goal 2',
-        priority: 2,
         horizonYears: 8,
         amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 5000000 },
-          ambitious: { targetAmount: 6500000 },
+          basic: { targetAmount: 5000000, priority: 2 },
+          ambitious: { targetAmount: 6500000, priority: 3 },
         },
       },
     ];

@@ -193,75 +193,80 @@
       {
         "goalId": "medical_corpus",
         "goalName": "Medical / Health Corpus",
-        "priority": 1,
         "horizonYears": 5,
         "amountVariancePct": 0,
         "tiers": {
           "basic": {
-            "targetAmount": 5000000
+            "targetAmount": 5000000,
+            "priority": 1
           },
           "ambitious": {
-            "targetAmount": 7000000
+            "targetAmount": 7000000,
+            "priority": 2
           }
         }
       },
       {
         "goalId": "car_purchase",
         "goalName": "Car Purchase",
-        "priority": 2,
         "horizonYears": 3,
         "amountVariancePct": 10,
         "tiers": {
           "basic": {
-            "targetAmount": 1200000
+            "targetAmount": 1200000,
+            "priority": 3
           },
           "ambitious": {
-            "targetAmount": 2000000
+            "targetAmount": 2000000,
+            "priority": 4
           }
         }
       },
       {
         "goalId": "home_upgrade",
         "goalName": "Home Purchase / Upgrade",
-        "priority": 3,
         "horizonYears": 8,
         "amountVariancePct": 15,
         "tiers": {
           "basic": {
-            "targetAmount": 6000000
+            "targetAmount": 6000000,
+            "priority": 4
           },
           "ambitious": {
-            "targetAmount": 10000000
+            "targetAmount": 10000000,
+            "priority": 5
           }
         }
       },
       {
         "goalId": "child_education",
         "goalName": "Child Higher Education",
-        "priority": 4,
         "horizonYears": 12,
         "amountVariancePct": 15,
         "tiers": {
           "basic": {
-            "targetAmount": 5000000
+            "targetAmount": 5000000,
+            "priority": 5
           },
           "ambitious": {
-            "targetAmount": 8000000
+            "targetAmount": 8000000,
+            "priority": 1
           }
         }
       },
       {
         "goalId": "retirement",
         "goalName": "Retirement",
-        "priority": 5,
         "horizonYears": 25,
         "amountVariancePct": 20,
         "tiers": {
           "basic": {
-            "targetAmount": 30000000
+            "targetAmount": 30000000,
+            "priority": 6
           },
           "ambitious": {
-            "targetAmount": 50000000
+            "targetAmount": 50000000,
+            "priority": 7
           }
         }
       }

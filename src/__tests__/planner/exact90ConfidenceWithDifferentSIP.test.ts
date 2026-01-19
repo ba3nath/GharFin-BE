@@ -71,12 +71,11 @@ function createTestScenario(
   const goal: Goal = {
     goalId,
     goalName,
-    priority: 1,
     horizonYears: 5,
     amountVariancePct: 0,
     tiers: {
-      basic: { targetAmount: 5000000 },
-      ambitious: { targetAmount: 5000000 },
+      basic: { targetAmount: 5000000, priority: 1 },
+      ambitious: { targetAmount: 5000000, priority: 2 },
     },
   };
 
