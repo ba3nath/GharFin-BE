@@ -36,4 +36,10 @@ const method2Result = planner.planMethod2();
 fs.writeFileSync("method2-output.json", JSON.stringify(method2Result, null, 2));
 console.log("Method 2 output saved to method2-output.json");
 
+// Run Method 3
+console.log("Running Method 3...");
+const method3Result = planner.planMethod3();
+fs.writeFileSync("method3-output.json", JSON.stringify(method3Result, null, 2));
+console.log("Method 3 output saved to method3-output.json");
+
 console.log("\nPlanning complete!");

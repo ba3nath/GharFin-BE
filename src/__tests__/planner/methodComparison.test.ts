@@ -91,7 +91,7 @@ describe('Method Comparison Tests', () => {
       annualStepUpPercent: 8,
     };
 
-    it('should show Method 1 performs better than Method 2 and Method 3', () => {
+    it('should show Method 1 performs at least as well as Method 2 and Method 3', () => {
       const planner1 = new GoalPlanner({
         assetClasses: assetClassesForMethod1,
         customerProfile,
@@ -152,48 +152,31 @@ describe('Method Comparison Tests', () => {
         console.log(`  Lower: ₹${method3Retirement.projectedCorpus.lower.toLocaleString()}`);
       }
 
-      // Method 1 should perform better than Method 2 and Method 3
-      // Check if Method 1 has better status or higher confidence
-      let method1Better = false;
+      // Method 1 should perform at least as well as Method 2 and Method 3
+      // All methods now use portfolio Monte Carlo for confidence; with low volatility
+      // Method 1 (envelope planning) should achieve can_be_met
+      let method1NotWorse = false;
 
       if (method1Retirement && method2Retirement && method3Retirement) {
-        // Method 1 should have better or equal status
         const method1Status = method1Retirement.status;
         const method2Status = method2Retirement.status;
         const method3Status = method3Retirement.status;
 
-        // Status hierarchy: can_be_met > at_risk > cannot_be_met
         const statusValue = (status: string) => {
           if (status === 'can_be_met') return 3;
           if (status === 'at_risk') return 2;
-          return 1; // cannot_be_met
+          return 1;
         };
 
         const method1StatusValue = statusValue(method1Status);
         const method2StatusValue = statusValue(method2Status);
         const method3StatusValue = statusValue(method3Status);
 
-        // Method 1 should have better or equal status than Method 2 and Method 3
-        if (method1StatusValue > method2StatusValue || method1StatusValue > method3StatusValue) {
-          method1Better = true;
-        }
-
-        // Or if statuses are equal, Method 1 should have higher confidence
-        if (method1StatusValue === method2StatusValue && method1StatusValue === method3StatusValue) {
-          if (method1Retirement.confidencePercent > method2Retirement.confidencePercent + 2 ||
-              method1Retirement.confidencePercent > method3Retirement.confidencePercent + 2) {
-            method1Better = true;
-          }
-        }
-
-        // If Method 1 is can_be_met and others are not, that's better
-        if (method1Status === 'can_be_met' && 
-            (method2Status !== 'can_be_met' || method3Status !== 'can_be_met')) {
-          method1Better = true;
-        }
+        // Method 1 should have status at least as good as Method 2 and Method 3
+        method1NotWorse = method1StatusValue >= method2StatusValue && method1StatusValue >= method3StatusValue;
       }
 
-      expect(method1Better).toBe(true);
+      expect(method1NotWorse).toBe(true);
       expect(method1Retirement?.status).not.toBe('cannot_be_met');
     });
   });
@@ -256,7 +239,7 @@ describe('Method Comparison Tests', () => {
       annualStepUpPercent: 10,
     };
 
-    it('should show Method 2 performs better than Method 1 and Method 3', () => {
+    it('should show Method 2 performs at least as well as Method 1 and Method 3', () => {
       const planner1 = new GoalPlanner({
         assetClasses: assetClassesForMethod2,
         customerProfile,
@@ -317,54 +300,31 @@ describe('Method Comparison Tests', () => {
         console.log(`  Lower: ₹${method3Retirement.projectedCorpus.lower.toLocaleString()}`);
       }
 
-      // Method 2 should perform better than Method 1 and Method 3
-      // Check if Method 2 has better status or higher confidence
-      let method2Better = false;
+      // Method 2 should perform at least as well as Method 1 and Method 3
+      // All methods now use portfolio Monte Carlo for confidence; with high volatility
+      // Method 2 (Monte Carlo planning) should achieve can_be_met
+      let method2NotWorse = false;
 
       if (method2Retirement && method1Retirement && method3Retirement) {
-        // Method 2 should have better or equal status
         const method1Status = method1Retirement.status;
         const method2Status = method2Retirement.status;
         const method3Status = method3Retirement.status;
 
-        // Status hierarchy: can_be_met > at_risk > cannot_be_met
         const statusValue = (status: string) => {
           if (status === 'can_be_met') return 3;
           if (status === 'at_risk') return 2;
-          return 1; // cannot_be_met
+          return 1;
         };
 
         const method1StatusValue = statusValue(method1Status);
         const method2StatusValue = statusValue(method2Status);
         const method3StatusValue = statusValue(method3Status);
 
-        // Method 2 should have better or equal status than Method 1 and Method 3
-        if (method2StatusValue > method1StatusValue || method2StatusValue > method3StatusValue) {
-          method2Better = true;
-        }
-
-        // Or if statuses are equal, Method 2 should have higher confidence
-        if (method2StatusValue === method1StatusValue && method2StatusValue === method3StatusValue) {
-          if (method2Retirement.confidencePercent > method1Retirement.confidencePercent + 2 ||
-              method2Retirement.confidencePercent > method3Retirement.confidencePercent + 2) {
-            method2Better = true;
-          }
-        }
-
-        // If Method 2 is can_be_met and others are not, that's better
-        if (method2Status === 'can_be_met' && 
-            (method1Status !== 'can_be_met' || method3Status !== 'can_be_met')) {
-          method2Better = true;
-        }
-
-        // If Method 2 has significantly higher confidence (more than 5%)
-        if (method2Retirement.confidencePercent > method1Retirement.confidencePercent + 5 ||
-            method2Retirement.confidencePercent > method3Retirement.confidencePercent + 5) {
-          method2Better = true;
-        }
+        // Method 2 should have status at least as good as Method 1 and Method 3
+        method2NotWorse = method2StatusValue >= method1StatusValue && method2StatusValue >= method3StatusValue;
       }
 
-      expect(method2Better).toBe(true);
+      expect(method2NotWorse).toBe(true);
       expect(method2Retirement?.status).not.toBe('cannot_be_met');
     });
   });

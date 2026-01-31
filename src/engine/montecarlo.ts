@@ -4,15 +4,18 @@ import {
   futureValue,
   futureValueOfAnnuity,
 } from "../utils/math";
-import { yearsToMonths } from "../utils/time";
-import { AssetAllocation } from "./portfolio";
-import { AssetClassData, calculateAvgPositiveReturn } from "../models/AssetClass";
+import { yearsToMonths, isInLast12Months } from "../utils/time";
+import { AssetAllocation, getOptimalAllocation, getTimeBasedAllocation } from "./portfolio";
+import { AssetClassData, AssetClasses, calculateAvgPositiveReturn, getAssetClassData } from "../models/AssetClass";
 import { EnvelopeBounds } from "./envelope";
+import { Goal, getGoalTarget } from "../models/Goal";
+import { CustomerProfile } from "../models/CustomerProfile";
+import { PlanningResult } from "../models/PlanningResult";
 
 /**
  * Monte Carlo simulation parameters
  */
-const SIMULATION_COUNT_LITE = 75; // Monte Carlo lite: 50-100 paths (for validation)
+export const SIMULATION_COUNT_LITE = 75; // Monte Carlo lite: 50-100 paths (for validation)
 const SIMULATION_COUNT_METHOD2 = 1000; // Method 2: 1000 paths for planning
 
 /**
@@ -414,6 +417,200 @@ export function calculateMonteCarloConfidence(
   const finalValues = paths.map((p) => p.finalCorpus);
   const pathsMeetingTarget = finalValues.filter((v) => v >= targetAmount).length;
   return Math.round((pathsMeetingTarget / finalValues.length) * 100);
+}
+
+/**
+ * Calculate confidence percentage from networth values at goal due month
+ * Returns percentage of paths where networth >= target amount
+ */
+export function calculateConfidenceFromPaths(
+  networthAtDueMonth: number[],
+  targetAmount: number
+): number {
+  if (networthAtDueMonth.length === 0) return 0;
+  const meetingTarget = networthAtDueMonth.filter((v) => v >= targetAmount).length;
+  return Math.round((meetingTarget / networthAtDueMonth.length) * 100);
+}
+
+/** SIP input parameters needed for Monte Carlo (avoids circular import from goalPlanner) */
+export interface MonteCarloSIPInput {
+  annualStepUpPercent: number;
+}
+
+/**
+ * Run Monte Carlo lite simulation for multi-goal portfolio
+ * Simulates the full portfolio with random returns and withdrawals at goal due dates.
+ * Returns networth at goalDueMonth for each path (75 paths).
+ * networth = portfolio value before withdrawing for targetGoal (can we cover the target?).
+ */
+export function runMultiGoalPortfolioMonteCarloLite(
+  planningResult: PlanningResult,
+  goals: Goal[],
+  targetGoal: Goal,
+  customerProfile: CustomerProfile,
+  assetClasses: AssetClasses,
+  sipInput: MonteCarloSIPInput,
+  tier: "basic" | "ambitious",
+  goalDueMonth: number
+): number[] {
+  const maxHorizonMonths = Math.max(...goals.map((g) => yearsToMonths(g.horizonYears)));
+  const sortedGoals = [...goals].sort((a, b) => a.horizonYears - b.horizonYears);
+
+  const initialCorpusByGoal = planningResult.corpusAllocation;
+
+  const sipByGoal: Record<string, number> = {};
+  for (const allocation of planningResult.sipAllocation.perGoalAllocations) {
+    const goalId = allocation.goalId.replace("_basic", "").replace("_ambitious", "");
+    if (!sipByGoal[goalId]) sipByGoal[goalId] = 0;
+    sipByGoal[goalId] += allocation.monthlyAmount;
+  }
+
+  const basicTierTargetByGoal: Record<string, number> = {};
+  const ambitiousTierTargetByGoal: Record<string, number> = {};
+  for (const goal of goals) {
+    basicTierTargetByGoal[goal.goalId] = getGoalTarget(goal, "basic");
+    ambitiousTierTargetByGoal[goal.goalId] = getGoalTarget(goal, "ambitious");
+  }
+
+  const networthAtDueMonth: number[] = [];
+
+  for (let pathIdx = 0; pathIdx < SIMULATION_COUNT_LITE; pathIdx++) {
+    const corpusByGoalAndAsset: Record<string, Record<string, number>> = {};
+    for (const goal of goals) {
+      const goalCorpusAlloc = initialCorpusByGoal[goal.goalId] || {};
+      corpusByGoalAndAsset[goal.goalId] = {};
+      for (const [ac, amt] of Object.entries(goalCorpusAlloc)) {
+        corpusByGoalAndAsset[goal.goalId][ac] = amt;
+      }
+    }
+
+    const currentSIPByGoal: Record<string, number> = {};
+    for (const [gid, amt] of Object.entries(sipByGoal)) {
+      currentSIPByGoal[gid] = amt;
+    }
+
+    const goalsWithRemoved = new Set<string>();
+    const finalCorpusByGoal: Record<string, number> = {};
+    let networthAtTargetMonth = 0;
+
+    for (let month = 1; month <= maxHorizonMonths; month++) {
+      let totalNetworth = 0;
+
+      for (const goal of sortedGoals) {
+        const goalId = goal.goalId;
+        const goalHorizonMonths = yearsToMonths(goal.horizonYears);
+
+        if (month > goalHorizonMonths && goalsWithRemoved.has(goalId)) {
+          totalNetworth += finalCorpusByGoal[goalId] ?? 0;
+          continue;
+        }
+
+        const isLast12Months = isInLast12Months(month - 1, goalHorizonMonths);
+        const baseAllocation = getOptimalAllocation(
+          goal,
+          tier,
+          customerProfile.corpus.allowedAssetClasses,
+          assetClasses,
+          month - 1
+        );
+        const assetAllocation = isLast12Months
+          ? getTimeBasedAllocation(
+              goal.horizonYears,
+              month - 1,
+              goalHorizonMonths,
+              baseAllocation,
+              customerProfile.corpus.allowedAssetClasses
+            )
+          : baseAllocation;
+
+        const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
+        const assetClassDataMap: Record<string, AssetClassData> = {};
+        for (const alloc of assetAllocation) {
+          const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+          if (data) assetClassDataMap[alloc.assetClass] = data;
+        }
+
+        let goalCorpus = 0;
+        for (const alloc of assetAllocation) {
+          if (alloc.assetClass === "cash") {
+            const amt = corpusByGoalAndAsset[goalId]?.[alloc.assetClass] ?? 0;
+            goalCorpus += amt;
+            continue;
+          }
+
+          const data = assetClassDataMap[alloc.assetClass];
+          if (!data || data.volatilityPct == null) continue;
+
+          const avgReturn = data.avgReturnPct / 100;
+          const volatility = data.volatilityPct / 100;
+          const randomReturn = generateRandomReturnLognormal(avgReturn, volatility);
+
+          const corpus = corpusByGoalAndAsset[goalId]?.[alloc.assetClass] ?? 0;
+          const newCorpus = corpus * (1 + randomReturn);
+          if (!corpusByGoalAndAsset[goalId]) corpusByGoalAndAsset[goalId] = {};
+          corpusByGoalAndAsset[goalId][alloc.assetClass] = newCorpus;
+          goalCorpus += newCorpus;
+        }
+
+        const goalSIP = currentSIPByGoal[goalId] ?? 0;
+        if (goalSIP > 0) {
+          for (const alloc of assetAllocation) {
+            if (alloc.assetClass === "cash") continue;
+            const sipAmount = goalSIP * (alloc.percentage / 100);
+            if (!corpusByGoalAndAsset[goalId]) corpusByGoalAndAsset[goalId] = {};
+            const current = corpusByGoalAndAsset[goalId][alloc.assetClass] ?? 0;
+            corpusByGoalAndAsset[goalId][alloc.assetClass] = current + sipAmount;
+            goalCorpus += sipAmount;
+          }
+        }
+
+        if (month === goalHorizonMonths && !goalsWithRemoved.has(goalId)) {
+          if (goalId === targetGoal.goalId && month === goalDueMonth) {
+            networthAtTargetMonth = totalNetworth + goalCorpus;
+          }
+          goalsWithRemoved.add(goalId);
+          const targetAmount =
+            tier === "basic" ? basicTierTargetByGoal[goalId] : ambitiousTierTargetByGoal[goalId];
+          const remainingCorpus = goalCorpus - targetAmount;
+
+          if (goalCorpus > 0) {
+            if (remainingCorpus >= 0) {
+              const reductionRatio = remainingCorpus / goalCorpus;
+              for (const assetClass of Object.keys(corpusByGoalAndAsset[goalId] ?? {})) {
+                const currentAmount = corpusByGoalAndAsset[goalId][assetClass] ?? 0;
+                corpusByGoalAndAsset[goalId][assetClass] = currentAmount * reductionRatio;
+              }
+              goalCorpus = remainingCorpus;
+            } else {
+              for (const assetClass of Object.keys(corpusByGoalAndAsset[goalId] ?? {})) {
+                corpusByGoalAndAsset[goalId][assetClass] = 0;
+              }
+              goalCorpus = remainingCorpus;
+            }
+          } else {
+            goalCorpus = -targetAmount;
+          }
+          finalCorpusByGoal[goalId] = goalCorpus;
+        }
+
+        totalNetworth += goalCorpus;
+      }
+
+      if (month > 0 && month % 12 === 0 && sipInput.annualStepUpPercent > 0) {
+        for (const goalId of Object.keys(currentSIPByGoal)) {
+          currentSIPByGoal[goalId] *= 1 + sipInput.annualStepUpPercent / 100;
+        }
+      }
+
+      if (month === goalDueMonth) {
+        networthAtTargetMonth = totalNetworth;
+      }
+    }
+
+    networthAtDueMonth.push(networthAtTargetMonth);
+  }
+
+  return networthAtDueMonth;
 }
 
 /**

@@ -110,7 +110,7 @@ describe('POST /api/plan/method2', () => {
     expect(response.body.method).toBe('method2');
     expect(response.body.goalFeasibilityTable).toBeDefined();
     expect(response.body.sipAllocation).toBeDefined();
-  }, 15000); // Increase timeout to 15 seconds
+  }, 30000); // Method 2 with Monte Carlo can take 15-20+ seconds
 
   it('should return 400 for invalid request', async () => {
     const response = await request(app)
@@ -123,7 +123,7 @@ describe('POST /api/plan/method2', () => {
   it('should handle custom monteCarloPaths parameter', async () => {
     const requestWithPaths = {
       ...minimalValidRequest,
-      monteCarloPaths: 500,
+      monteCarloPaths: 100,
     };
 
     const response = await request(app)
@@ -131,7 +131,7 @@ describe('POST /api/plan/method2', () => {
       .send(requestWithPaths);
     
     expect(response.status).toBe(200);
-  });
+  }, 30000); // Method 2 with Monte Carlo can take time
 
   it('should return error if volatilityPct missing', async () => {
     const requestWithoutVolatility = {

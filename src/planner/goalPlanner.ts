@@ -34,6 +34,9 @@ import {
   calculateMonteCarloBounds,
   calculateMonteCarloConfidence,
   calculateRequiredSIPMonteCarlo,
+  runMultiGoalPortfolioMonteCarloLite,
+  calculateConfidenceFromPaths,
+  SIMULATION_COUNT_LITE,
 } from "../engine/montecarlo";
 import { calculateNetworthProjection } from "../engine/networthProjection";
 
@@ -96,7 +99,7 @@ export class GoalPlanner {
   /**
    * Plan Method 1: With current corpus allocation
    */
-  planMethod1(maxIterations: number = 20): Method1Result {
+  planMethod1(maxIterations: number = 20, monteCarloPaths: number = SIMULATION_COUNT_LITE): Method1Result {
     const { assetClasses, customerProfile, goals, sipInput } = this.context;
 
     // Sort goals by basic tier priority
@@ -258,7 +261,8 @@ export class GoalPlanner {
     const feasibilityTable = this.buildFeasibilityTableFromPortfolio(
       planningResult,
       sortedGoals,
-      "method1"
+      "method1",
+      monteCarloPaths
     );
 
     // Build SIP allocation schedule
@@ -1915,8 +1919,8 @@ export class GoalPlanner {
           let confidencePercent = 0;
           let status: GoalStatus = "cannot_be_met";
 
-          if (method === "method2" && monteCarloPaths) {
-            // For Method 2, use Monte Carlo to calculate confidence
+          if (monteCarloPaths) {
+            // Use portfolio-level Monte Carlo for confidence (all methods)
             // For single-goal scenarios, use per-goal confidence (more accurate)
             if (goals.length === 1) {
               confidencePercent = basicState.confidencePercent;
@@ -1938,8 +1942,7 @@ export class GoalPlanner {
               portfolioLower = portfolioNetworth * 0.9; // Approximate lower bound
             }
           } else {
-            // For Methods 1 & 3, calculate lower bound using envelope method
-            // We need to calculate the lower bound of portfolio at goal due date
+            // Fallback: envelope-based lower bound (when monteCarloPaths not provided)
             const portfolioLowerBound = this.calculatePortfolioLowerBound(
               planningResult,
               goals,
@@ -1955,11 +1958,11 @@ export class GoalPlanner {
             confidencePercent = this.calculateConfidenceFromRemaining(remainingLower, targetAmount);
           }
 
-          // Determine status based on confidence (confidence takes precedence)
-          // Option A - Zero Threshold logic is applied through confidence calculation
-          if (confidencePercent >= 90) {
+          // Determine status based on confidence (use rounded value for consistency with display)
+          const roundedConfidence = Math.round(confidencePercent);
+          if (roundedConfidence >= 90) {
             status = "can_be_met";
-          } else if (confidencePercent >= 50) {
+          } else if (roundedConfidence >= 50) {
             status = "at_risk";
           } else {
             status = "cannot_be_met";
@@ -1970,7 +1973,7 @@ export class GoalPlanner {
             goalName: goal.goalName,
             tier: "basic",
             status,
-            confidencePercent: Math.round(confidencePercent),
+            confidencePercent: roundedConfidence,
             targetAmount: Math.round(targetAmount),
             projectedCorpus: {
               lower: Math.round(perGoalLower),
@@ -2017,8 +2020,8 @@ export class GoalPlanner {
           let confidencePercent = 0;
           let status: GoalStatus = "cannot_be_met";
 
-          if (method === "method2" && monteCarloPaths) {
-            // For Method 2, use Monte Carlo to calculate confidence
+          if (monteCarloPaths) {
+            // Use portfolio-level Monte Carlo for confidence (all methods)
             // For single-goal scenarios, use per-goal confidence (more accurate)
             if (goals.length === 1) {
               confidencePercent = ambitiousState.confidencePercent;
@@ -2040,7 +2043,7 @@ export class GoalPlanner {
               portfolioLower = portfolioNetworth * 0.9;
             }
           } else {
-            // For Methods 1 & 3, calculate lower bound
+            // Fallback: envelope-based lower bound (when monteCarloPaths not provided)
             const portfolioLowerBound = this.calculatePortfolioLowerBound(
               planningResult,
               goals,
@@ -2055,11 +2058,11 @@ export class GoalPlanner {
             confidencePercent = this.calculateConfidenceFromRemaining(remainingLower, targetAmount);
           }
 
-          // Determine status based on confidence (confidence takes precedence)
-          // Option A - Zero Threshold logic is applied through confidence calculation
-          if (confidencePercent >= 90) {
+          // Determine status based on confidence (use rounded value for consistency with display)
+          const roundedConfidence = Math.round(confidencePercent);
+          if (roundedConfidence >= 90) {
             status = "can_be_met";
-          } else if (confidencePercent >= 50) {
+          } else if (roundedConfidence >= 50) {
             status = "at_risk";
           } else {
             status = "cannot_be_met";
@@ -2070,7 +2073,7 @@ export class GoalPlanner {
             goalName: goal.goalName,
             tier: "ambitious",
             status,
-            confidencePercent: Math.round(confidencePercent),
+            confidencePercent: roundedConfidence,
             targetAmount: Math.round(targetAmount),
             projectedCorpus: {
               lower: Math.round(perGoalLower),
@@ -2169,7 +2172,9 @@ export class GoalPlanner {
   }
 
   /**
-   * Calculate portfolio confidence using Monte Carlo (for Method 2)
+   * Calculate portfolio confidence using Monte Carlo lite (for Method 2 multi-goal)
+   * Runs 75 stochastic paths to simulate portfolio and counts paths where
+   * networth at goal due date >= target amount.
    */
   private calculatePortfolioConfidenceMonteCarlo(
     planningResult: PlanningResult,
@@ -2178,40 +2183,18 @@ export class GoalPlanner {
     tier: "basic" | "ambitious",
     goalDueMonth: number,
     targetAmount: number,
-    monteCarloPaths: number
+    _monteCarloPaths: number
   ): number {
-    // Run Monte Carlo simulation for the entire portfolio
-    // Count how many paths can cover the withdrawal
-    let successCount = 0;
-
-    // Simplified: Use the existing networth projection and estimate
-    // In a full implementation, we'd run multiple Monte Carlo paths
-    const portfolioProjection = calculateNetworthProjection(
-      "method2",
+    const networthAtDueMonth = runMultiGoalPortfolioMonteCarloLite(
       planningResult,
       goals,
+      targetGoal,
       this.context.customerProfile,
       this.context.assetClasses,
-      this.context.sipInput,
-      tier
+      { annualStepUpPercent: this.context.sipInput.annualStepUpPercent },
+      tier,
+      goalDueMonth
     );
-
-    const monthData = portfolioProjection.monthlyValues.find(d => d.month === goalDueMonth);
-    if (monthData) {
-      const remainingNetworth = monthData.totalNetworth - targetAmount;
-      // For now, use a simplified confidence calculation
-      // In full implementation, we'd run actual Monte Carlo paths
-      if (remainingNetworth >= 0) {
-        return 100;
-      } else if (remainingNetworth >= -targetAmount * 0.1) {
-        // At risk: interpolate from 50% to 0%
-        const shortfallPercent = Math.abs(remainingNetworth / targetAmount) * 100;
-        return Math.max(0, 50 - (shortfallPercent / 10) * 50);
-      } else {
-        return 0;
-      }
-    }
-
-    return 0;
+    return calculateConfidenceFromPaths(networthAtDueMonth, targetAmount);
   }
 }

@@ -151,7 +151,7 @@ export function buildAssetClassDataMap(
   const assetClassDataMap: Record<string, any> = {};
   for (const alloc of assetAllocations) {
     if (alloc.assetClass === 'cash') continue;
-    const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+    const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon as "3Y" | "5Y" | "10Y");
     if (data) {
       assetClassDataMap[alloc.assetClass] = data;
     }
