@@ -92,3 +92,20 @@ export const SIPInputSchema = z.object({
   stretchSIPPercent: z.number().min(0).max(100),
   annualStepUpPercent: z.number().min(0),
 });
+
+/**
+ * Schema for planning API request body (Method 1, 2, 3).
+ * Optional fields have defaults applied in routes.
+ */
+export const PlanningRequestSchema = z.object({
+  assetClasses: AssetClassesSchema,
+  customerProfile: CustomerProfileSchema,
+  goals: GoalsSchema,
+  monthlySIP: z.number().min(0),
+  stretchSIPPercent: z.number().min(0).max(100).optional(),
+  annualStepUpPercent: z.number().min(0).optional(),
+  monteCarloPaths: z.number().int().min(1).optional(),
+  maxIterations: z.number().int().min(1).optional(),
+});
+
+export type PlanningRequest = z.infer<typeof PlanningRequestSchema>;

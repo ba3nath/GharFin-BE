@@ -230,3 +230,28 @@ describe('GoalPlanner - planMethod2', () => {
     }
   });
 });
+
+describe('GoalPlanner - sequential method calls (goalStates reset)', () => {
+  it('should produce valid results when calling planMethod1 then planMethod2 on same instance', () => {
+    const planner = new GoalPlanner({
+      assetClasses: minimalValidRequest.assetClasses,
+      customerProfile: minimalValidRequest.customerProfile,
+      goals: minimalValidRequest.goals.goals,
+      sipInput: minimalSIPInput,
+    });
+
+    const result1 = planner.planMethod1();
+    expect(result1.method).toBe('method1');
+    expect(result1.goalFeasibilityTable).toBeDefined();
+    expect(result1.sipAllocation).toBeDefined();
+    expect(result1.sipAllocationSchedule).toBeDefined();
+    expect(result1.corpusAllocation).toBeDefined();
+
+    const result2 = planner.planMethod2(100);
+    expect(result2.method).toBe('method2');
+    expect(result2.goalFeasibilityTable).toBeDefined();
+    expect(result2.sipAllocation).toBeDefined();
+    expect(result2.sipAllocationSchedule).toBeDefined();
+    expect(result2.corpusAllocation).toBeDefined();
+  });
+});

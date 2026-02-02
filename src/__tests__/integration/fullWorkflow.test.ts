@@ -199,8 +199,13 @@ describe('Method Comparison', () => {
     expect(method1Result.method).toBe('method1');
     expect(method2Result.method).toBe('method2');
 
-    // Both should have feasibility tables
-    expect(method1Result.goalFeasibilityTable.rows.length).toBe(method2Result.goalFeasibilityTable.rows.length);
+    // Both should have feasibility tables with at least one row per goal (basic tier always present)
+    const goalCount = minimalValidRequest.goals.goals.length;
+    expect(method1Result.goalFeasibilityTable.rows.length).toBeGreaterThanOrEqual(goalCount);
+    expect(method2Result.goalFeasibilityTable.rows.length).toBeGreaterThanOrEqual(goalCount);
+    // Row count can differ: Method 1 may only include basic tier when ambitious confidence < 90%; Method 2 may include both tiers
+    expect(method1Result.goalFeasibilityTable.rows.length).toBeLessThanOrEqual(goalCount * 2);
+    expect(method2Result.goalFeasibilityTable.rows.length).toBeLessThanOrEqual(goalCount * 2);
 
     // Both should have SIP allocations
     expect(method1Result.sipAllocation.perGoalAllocations.length).toBeGreaterThan(0);

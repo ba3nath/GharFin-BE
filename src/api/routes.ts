@@ -1,25 +1,16 @@
 import { Router, Request, Response } from "express";
 import { GoalPlanner, SIPInput } from "../planner/goalPlanner";
-import { AssetClasses } from "../models/AssetClass";
-import { CustomerProfile } from "../models/CustomerProfile";
-import { Goals } from "../models/Goal";
 import { validateEnvelope } from "../engine/montecarlo";
 import { AssetAllocation } from "../engine/portfolio";
+import { PlanningRequestSchema } from "../utils/validation";
 
 const router = Router();
 
-/**
- * Request body for planning endpoints (Method 1, 2, and 3).
- * Contains all necessary inputs for goal-based SIP planning.
- */
-interface PlanningRequest {
-  assetClasses: AssetClasses;
-  customerProfile: CustomerProfile;
-  goals: Goals;
-  monthlySIP: number;
-  stretchSIPPercent?: number;
-  annualStepUpPercent?: number;
-  monteCarloPaths?: number; // Optional, only for Method 2, default 1000
+function validationErrorResponse(error: { issues: unknown }) {
+  return {
+    error: "Validation failed",
+    details: error.issues,
+  };
 }
 
 /**
@@ -50,6 +41,10 @@ router.get("/plan/method1", (req: Request, res: Response) => {
  */
 router.post("/plan/method1", (req: Request, res: Response) => {
   try {
+    const parsed = PlanningRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(validationErrorResponse(parsed.error));
+    }
     const {
       assetClasses,
       customerProfile,
@@ -57,22 +52,14 @@ router.post("/plan/method1", (req: Request, res: Response) => {
       monthlySIP,
       stretchSIPPercent,
       annualStepUpPercent,
-    } = req.body as PlanningRequest;
-
-    // Validate inputs
-    if (!assetClasses || !customerProfile || !goals || monthlySIP === undefined) {
-      return res.status(400).json({
-        error: "Missing required fields: assetClasses, customerProfile, goals, monthlySIP",
-      });
-    }
+    } = parsed.data;
 
     const sipInput: SIPInput = {
       monthlySIP,
-      stretchSIPPercent: stretchSIPPercent || 0,
-      annualStepUpPercent: annualStepUpPercent || 0,
+      stretchSIPPercent: stretchSIPPercent ?? 0,
+      annualStepUpPercent: annualStepUpPercent ?? 0,
     };
 
-    // Create planner and execute Method 1
     const planner = new GoalPlanner({
       assetClasses,
       customerProfile,
@@ -81,13 +68,13 @@ router.post("/plan/method1", (req: Request, res: Response) => {
     });
 
     const result = planner.planMethod1();
-
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in Method 1 planning:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({
       error: "Internal server error",
-      message: error.message,
+      message,
     });
   }
 });
@@ -121,6 +108,10 @@ router.get("/plan/method2", (req: Request, res: Response) => {
  */
 router.post("/plan/method2", (req: Request, res: Response) => {
   try {
+    const parsed = PlanningRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(validationErrorResponse(parsed.error));
+    }
     const {
       assetClasses,
       customerProfile,
@@ -129,22 +120,14 @@ router.post("/plan/method2", (req: Request, res: Response) => {
       stretchSIPPercent,
       annualStepUpPercent,
       monteCarloPaths,
-    } = req.body as PlanningRequest;
-
-    // Validate inputs
-    if (!assetClasses || !customerProfile || !goals || monthlySIP === undefined) {
-      return res.status(400).json({
-        error: "Missing required fields: assetClasses, customerProfile, goals, monthlySIP",
-      });
-    }
+    } = parsed.data;
 
     const sipInput: SIPInput = {
       monthlySIP,
-      stretchSIPPercent: stretchSIPPercent || 0,
-      annualStepUpPercent: annualStepUpPercent || 0,
+      stretchSIPPercent: stretchSIPPercent ?? 0,
+      annualStepUpPercent: annualStepUpPercent ?? 0,
     };
 
-    // Create planner and execute Method 2
     const planner = new GoalPlanner({
       assetClasses,
       customerProfile,
@@ -152,14 +135,14 @@ router.post("/plan/method2", (req: Request, res: Response) => {
       sipInput,
     });
 
-    const result = planner.planMethod2(monteCarloPaths || 1000);
-
+    const result = planner.planMethod2(monteCarloPaths ?? 1000);
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in Method 2 planning:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({
       error: "Internal server error",
-      message: error.message,
+      message,
     });
   }
 });
@@ -193,6 +176,10 @@ router.get("/plan/method3", (req: Request, res: Response) => {
  */
 router.post("/plan/method3", (req: Request, res: Response) => {
   try {
+    const parsed = PlanningRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(validationErrorResponse(parsed.error));
+    }
     const {
       assetClasses,
       customerProfile,
@@ -202,22 +189,14 @@ router.post("/plan/method3", (req: Request, res: Response) => {
       annualStepUpPercent,
       monteCarloPaths,
       maxIterations,
-    } = req.body as PlanningRequest & { maxIterations?: number };
-
-    // Validate inputs
-    if (!assetClasses || !customerProfile || !goals || monthlySIP === undefined) {
-      return res.status(400).json({
-        error: "Missing required fields: assetClasses, customerProfile, goals, monthlySIP",
-      });
-    }
+    } = parsed.data;
 
     const sipInput: SIPInput = {
       monthlySIP,
-      stretchSIPPercent: stretchSIPPercent || 0,
-      annualStepUpPercent: annualStepUpPercent || 0,
+      stretchSIPPercent: stretchSIPPercent ?? 0,
+      annualStepUpPercent: annualStepUpPercent ?? 0,
     };
 
-    // Create planner and execute Method 3
     const planner = new GoalPlanner({
       assetClasses,
       customerProfile,
@@ -225,14 +204,14 @@ router.post("/plan/method3", (req: Request, res: Response) => {
       sipInput,
     });
 
-    const result = planner.planMethod3(monteCarloPaths || 1000, maxIterations || 20);
-
+    const result = planner.planMethod3(monteCarloPaths ?? 1000, maxIterations ?? 20);
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in Method 3 planning:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({
       error: "Internal server error",
-      message: error.message,
+      message,
     });
   }
 });
@@ -275,11 +254,12 @@ router.post("/validate", (req: Request, res: Response) => {
     );
 
     res.json(validation);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in validation:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({
       error: "Internal server error",
-      message: error.message,
+      message,
     });
   }
 });

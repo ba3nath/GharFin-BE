@@ -54,7 +54,6 @@ coverage/
 # TypeScript
 *.js.map
 
-# Optional: Uncomment if you want to ignore generated HTML/JSON output files
-# *.html
-# method*-output.json
-# test-*-output.json
+# Generated planning output (from run-planning.ts)
+method*-output.json
+output-method*.json

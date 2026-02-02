@@ -202,32 +202,6 @@ function simulatePathLognormal(
 }
 
 /**
- * Run Monte Carlo simulation for single asset class using probability-based modeling (for Method 1 validation)
- */
-export function runMonteCarloSimulation(
-  initialCorpus: number,
-  monthlySIP: number,
-  assetClassData: AssetClassData,
-  horizonYears: number
-): SimulationPath[] {
-  const months = yearsToMonths(horizonYears);
-
-  const paths: SimulationPath[] = [];
-  for (let i = 0; i < SIMULATION_COUNT_LITE; i++) {
-    paths.push(
-      simulatePathProbability(
-        initialCorpus,
-        monthlySIP,
-        assetClassData,
-        months
-      )
-    );
-  }
-
-  return paths;
-}
-
-/**
  * Run Monte Carlo simulation for portfolio using lognormal distribution (for Method 2)
  * Tracks corpus and SIP growth by asset class
  */
@@ -600,10 +574,6 @@ export function runMultiGoalPortfolioMonteCarloLite(
         for (const goalId of Object.keys(currentSIPByGoal)) {
           currentSIPByGoal[goalId] *= 1 + sipInput.annualStepUpPercent / 100;
         }
-      }
-
-      if (month === goalDueMonth) {
-        networthAtTargetMonth = totalNetworth;
       }
     }
 

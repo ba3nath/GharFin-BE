@@ -220,3 +220,50 @@ describe('Error Handling', () => {
     expect(response.body.error).toBeDefined();
   });
 });
+
+describe('Zod validation - invalid but present payloads', () => {
+  it('should return 400 with details for negative monthlySIP', async () => {
+    const invalidRequest = {
+      ...minimalValidRequest,
+      monthlySIP: -1000,
+    };
+    const response = await request(app)
+      .post('/api/plan/method1')
+      .send(invalidRequest);
+    
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Validation failed');
+    expect(response.body.details).toBeDefined();
+    expect(Array.isArray(response.body.details)).toBe(true);
+    expect(response.body.details.length).toBeGreaterThan(0);
+  });
+
+  it('should return 400 with details when goals.goals is not an array', async () => {
+    const invalidRequest = {
+      ...minimalValidRequest,
+      goals: { goals: 'not-an-array' },
+    };
+    const response = await request(app)
+      .post('/api/plan/method1')
+      .send(invalidRequest);
+    
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Validation failed');
+    expect(response.body.details).toBeDefined();
+    expect(Array.isArray(response.body.details)).toBe(true);
+  });
+
+  it('should return 400 with details when stretchSIPPercent exceeds 100', async () => {
+    const invalidRequest = {
+      ...minimalValidRequest,
+      stretchSIPPercent: 150,
+    };
+    const response = await request(app)
+      .post('/api/plan/method1')
+      .send(invalidRequest);
+    
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Validation failed');
+    expect(response.body.details).toBeDefined();
+  });
+});

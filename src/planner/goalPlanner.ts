@@ -27,6 +27,13 @@ import { PlanningResult, Method1Result, Method2Result, Method3Result } from "../
 import { yearsToMonths } from "../utils/time";
 import { roundToNearest1000 } from "../utils/math";
 import {
+  SIP_TOLERANCE,
+  DEFAULT_MAX_ITERATIONS,
+  SHORT_TERM_HORIZON_YEARS,
+  CONFIDENCE_CAN_BE_MET,
+  CONFIDENCE_AT_RISK_MIN,
+} from "../utils/constants";
+import {
   optimizeCorpusAllocation,
 } from "../engine/rebalancer";
 import {
@@ -99,84 +106,32 @@ export class GoalPlanner {
   /**
    * Plan Method 1: With current corpus allocation
    */
-  planMethod1(maxIterations: number = 20, monteCarloPaths: number = SIMULATION_COUNT_LITE): Method1Result {
+  planMethod1(maxIterations: number = DEFAULT_MAX_ITERATIONS, monteCarloPaths: number = SIMULATION_COUNT_LITE): Method1Result {
+    this.goalStates.clear();
     const { assetClasses, customerProfile, goals, sipInput } = this.context;
 
     // Sort goals by basic tier priority
     const sortedGoals = getBasicTiersSorted(goals);
 
     // Separate goals by horizon (< 3 years = short-term, SIP = 0; >= 3 years = long-term)
-    const shortTermGoals = sortedGoals.filter((g) => g.horizonYears < 3);
-    const longTermGoals = sortedGoals.filter((g) => g.horizonYears >= 3);
+    const shortTermGoals = sortedGoals.filter((g) => g.horizonYears < SHORT_TERM_HORIZON_YEARS);
+    const longTermGoals = sortedGoals.filter((g) => g.horizonYears >= SHORT_TERM_HORIZON_YEARS);
 
-    // Handle short-term goals: allocate corpus but set SIP to 0
-    const shortTermCorpusAllocation: Record<string, Record<string, number>> = {};
-    if (shortTermGoals.length > 0) {
-      const goalCorpusRequirements: Record<string, number> = {};
-      for (const goal of shortTermGoals) {
-        goalCorpusRequirements[goal.goalId] = getGoalTarget(goal, "basic");
-      }
-      const allocatedCorpus = optimizeCorpusAllocation(
-        customerProfile,
-        shortTermGoals,
-        goalCorpusRequirements
-      );
-      for (const goal of shortTermGoals) {
-        const goalCorpusAlloc = allocatedCorpus[goal.goalId] || {};
-        shortTermCorpusAllocation[goal.goalId] = goalCorpusAlloc;
-        
-        // Store state for short-term goal (no SIP allocation)
-        const goalCorpusTotal = Object.values(goalCorpusAlloc).reduce((sum, v) => sum + v, 0);
-        const assetAllocation = getOptimalAllocation(
-          goal,
-          "basic",
-          customerProfile.corpus.allowedAssetClasses,
-          assetClasses,
-          0
-        );
-        
-        const assetClassDataMap: Record<string, any> = {};
-        const timeHorizon = "3Y";
-        for (const alloc of assetAllocation) {
-          const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
-          if (data) {
-            assetClassDataMap[alloc.assetClass] = data;
-          }
-        }
-        
-        const target = getGoalTarget(goal, "basic");
-        const envelopeBounds = calculatePortfolioEnvelopeBounds(
-          goalCorpusTotal,
-          0, // SIP = 0 for short-term goals
-          assetAllocation,
-          assetClassDataMap,
-          goal.horizonYears,
-          0 // No step-up for short-term goals
-        );
-        
-        const confidencePercent = calculateConfidencePercent(target, envelopeBounds);
-        
-        this.goalStates.set(`${goal.goalId}_basic`, {
-          goalId: goal.goalId,
-          tier: "basic",
-          allocatedCorpus: goalCorpusTotal,
-          allocatedSIP: 0,
-          assetAllocation,
-          envelopeBounds,
-          confidencePercent,
-        });
-      }
-    }
+    const shortTermCorpusAllocation = this.handleShortTermGoals(
+      shortTermGoals,
+      assetClasses,
+      customerProfile,
+      { useEnvelope: true }
+    );
 
     // Calculate available SIP (base + stretch) for long-term goals only
-    const stretchSIP = sipInput.monthlySIP * (1 + sipInput.stretchSIPPercent / 100);
-    const availableSIP = Math.max(sipInput.monthlySIP, stretchSIP);
+    const availableSIP = sipInput.monthlySIP * (1 + sipInput.stretchSIPPercent / 100);
 
     // Start with initial corpus allocation for long-term goals only
     let optimizedCorpus = this.optimizeCorpusAllocation(longTermGoals);
 
     // Iterate until convergence (only for long-term goals)
-    const sipTolerance = 1000; // ₹1000 tolerance for convergence
+    const sipTolerance = SIP_TOLERANCE;
     let previousSIPAllocations = new Map<string, number>();
     let iterations = 0;
     let converged = false;
@@ -245,15 +200,22 @@ export class GoalPlanner {
       remainingSIP
     );
 
-    // Build SIP plan
+    // Build SIP plan and allocation schedule once
     const sipPlan = this.buildSIPPlan(finalBasicGoalSIP, ambitiousGoalSIP, availableSIP);
+    const allocationSchedule = this.buildAllocationSchedule(
+      sortedGoals,
+      sipPlan,
+      sipInput,
+      assetClasses,
+      customerProfile
+    );
 
     // Build planning result for portfolio-based feasibility calculation
     const planningResult: Method1Result = {
       method: "method1",
       goalFeasibilityTable: this.buildFeasibilityTable(sortedGoals), // Keep for per-goal bounds
       sipAllocation: sipPlan,
-      sipAllocationSchedule: this.buildAllocationSchedule(sortedGoals, sipPlan, sipInput, assetClasses, customerProfile),
+      sipAllocationSchedule: allocationSchedule,
       corpusAllocation: mergedCorpus,
     };
 
@@ -263,15 +225,6 @@ export class GoalPlanner {
       sortedGoals,
       "method1",
       monteCarloPaths
-    );
-
-    // Build SIP allocation schedule
-    const allocationSchedule = this.buildAllocationSchedule(
-      sortedGoals,
-      sipPlan,
-      sipInput,
-      assetClasses,
-      customerProfile
     );
 
     // Get corpus allocation for each goal (merged short-term + long-term)
@@ -298,7 +251,8 @@ export class GoalPlanner {
   /**
    * Plan Method 2: Monte Carlo simulation-based planning
    */
-  planMethod2(monteCarloPaths: number = 1000, maxIterations: number = 20): Method2Result {
+  planMethod2(monteCarloPaths: number = 1000, maxIterations: number = DEFAULT_MAX_ITERATIONS): Method2Result {
+    this.goalStates.clear();
     const { assetClasses, customerProfile, goals, sipInput } = this.context;
 
     // Validate volatilityPct is present for all asset classes
@@ -314,81 +268,24 @@ export class GoalPlanner {
     const sortedGoals = getBasicTiersSorted(goals);
 
     // Separate goals by horizon (< 3 years = short-term, SIP = 0; >= 3 years = long-term)
-    const shortTermGoals = sortedGoals.filter((g) => g.horizonYears < 3);
-    const longTermGoals = sortedGoals.filter((g) => g.horizonYears >= 3);
+    const shortTermGoals = sortedGoals.filter((g) => g.horizonYears < SHORT_TERM_HORIZON_YEARS);
+    const longTermGoals = sortedGoals.filter((g) => g.horizonYears >= SHORT_TERM_HORIZON_YEARS);
 
-    // Handle short-term goals: allocate corpus but set SIP to 0
-    const shortTermCorpusAllocation: Record<string, Record<string, number>> = {};
-    if (shortTermGoals.length > 0) {
-      const goalCorpusRequirements: Record<string, number> = {};
-      for (const goal of shortTermGoals) {
-        goalCorpusRequirements[goal.goalId] = getGoalTarget(goal, "basic");
-      }
-      const allocatedCorpus = optimizeCorpusAllocation(
-        customerProfile,
-        shortTermGoals,
-        goalCorpusRequirements
-      );
-      for (const goal of shortTermGoals) {
-        const goalCorpusAlloc = allocatedCorpus[goal.goalId] || {};
-        shortTermCorpusAllocation[goal.goalId] = goalCorpusAlloc;
-        
-        // Store state for short-term goal (no SIP allocation)
-        const goalCorpusTotal = Object.values(goalCorpusAlloc).reduce((sum, v) => sum + v, 0);
-        const assetAllocation = getOptimalAllocation(
-          goal,
-          "basic",
-          customerProfile.corpus.allowedAssetClasses,
-          assetClasses,
-          0
-        );
-        
-        const assetClassDataMap: Record<string, AssetClassData> = {};
-        const timeHorizon = "3Y";
-        for (const alloc of assetAllocation) {
-          const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
-          if (data) {
-            assetClassDataMap[alloc.assetClass] = data;
-          }
-        }
-        
-        // Run Monte Carlo with SIP = 0 to get bounds
-        const monthlySIPByAssetClass: Record<string, number> = {}; // Empty - no SIP
-        const paths = runPortfolioMonteCarloSimulationLognormal(
-          goalCorpusAlloc,
-          monthlySIPByAssetClass,
-          assetAllocation,
-          assetClassDataMap,
-          goal.horizonYears,
-          monteCarloPaths,
-          0 // No step-up for short-term goals
-        );
-        
-        const bounds = calculateMonteCarloBounds(paths);
-        const target = getGoalTarget(goal, "basic");
-        const confidencePercent = Math.round(calculateMonteCarloConfidence(paths, target));
-        
-        this.goalStates.set(`${goal.goalId}_basic`, {
-          goalId: goal.goalId,
-          tier: "basic",
-          allocatedCorpus: goalCorpusTotal,
-          allocatedSIP: 0,
-          assetAllocation,
-          envelopeBounds: bounds,
-          confidencePercent,
-        });
-      }
-    }
+    const shortTermCorpusAllocation = this.handleShortTermGoals(
+      shortTermGoals,
+      assetClasses,
+      customerProfile,
+      { useEnvelope: false, monteCarloPaths }
+    );
 
     // Calculate available SIP (base + stretch) for long-term goals only
-    const stretchSIP = sipInput.monthlySIP * (1 + sipInput.stretchSIPPercent / 100);
-    const availableSIP = Math.max(sipInput.monthlySIP, stretchSIP);
+    const availableSIP = sipInput.monthlySIP * (1 + sipInput.stretchSIPPercent / 100);
 
     // Start with initial corpus allocation for long-term goals only
     let optimizedCorpus = this.optimizeCorpusAllocation(longTermGoals);
 
     // Iterate until convergence (only for long-term goals)
-    const sipTolerance = 1000; // ₹1000 tolerance for convergence
+    const sipTolerance = SIP_TOLERANCE;
     let previousSIPAllocations = new Map<string, number>();
     let iterations = 0;
     let converged = false;
@@ -511,7 +408,8 @@ export class GoalPlanner {
    * For goals >= 3 years: Calculate SIP with corpus=0, rebalance corpus to match SIP allocation, iterate
    * For goals < 3 years: Allocate corpus but skip SIP calculations (SIP = 0)
    */
-  planMethod3(monteCarloPaths: number = 1000, maxIterations: number = 20): Method3Result {
+  planMethod3(monteCarloPaths: number = 1000, maxIterations: number = DEFAULT_MAX_ITERATIONS): Method3Result {
+    this.goalStates.clear();
     const { assetClasses, customerProfile, goals, sipInput } = this.context;
 
     // Validate volatilityPct is present for all asset classes
@@ -527,98 +425,23 @@ export class GoalPlanner {
     const sortedGoals = getBasicTiersSorted(goals);
 
     // Separate goals by horizon
-    const longTermGoals = sortedGoals.filter((g) => g.horizonYears >= 3);
-    const shortTermGoals = sortedGoals.filter((g) => g.horizonYears < 3);
+    const longTermGoals = sortedGoals.filter((g) => g.horizonYears >= SHORT_TERM_HORIZON_YEARS);
+    const shortTermGoals = sortedGoals.filter((g) => g.horizonYears < SHORT_TERM_HORIZON_YEARS);
 
-    // Step 1: Handle short-term goals (< 3 years)
-    // Allocate corpus based on priority and basic tier target, but skip SIP calculations
-    const shortTermCorpusAllocation: Record<string, Record<string, number>> = {};
-    if (shortTermGoals.length > 0) {
-      // Calculate corpus requirements for short-term goals (basic tier target amounts)
-      // Use priority-based allocation to avoid disproportionate corpus allocation
-      const goalCorpusRequirements: Record<string, number> = {};
-      for (const goal of shortTermGoals) {
-        // Use basic tier target as the corpus requirement (capped at target)
-        goalCorpusRequirements[goal.goalId] = getGoalTarget(goal, "basic");
-      }
-
-      // Allocate corpus based on priority (using optimizeCorpusAllocation which handles priority)
-      const allocatedCorpus = optimizeCorpusAllocation(
-        customerProfile,
-        shortTermGoals,
-        goalCorpusRequirements
-      );
-
-      for (const goal of shortTermGoals) {
-        const goalCorpusAlloc = allocatedCorpus[goal.goalId] || {};
-        const goalCorpusTotal = Object.values(goalCorpusAlloc).reduce((sum, v) => sum + v, 0);
-        
-        // Get optimal allocation for this goal (static, no time-based shifts for short-term)
-        // Use currentMonth = 0 to get base allocation without time-based shifts
-        const assetAllocation = getOptimalAllocation(
-          goal,
-          "basic",
-          customerProfile.corpus.allowedAssetClasses,
-          assetClasses,
-          0 // No time-based shifts for short-term goals
-        );
-
-        // Allocate corpus by asset class to match this goal's allocation %
-        const finalGoalCorpusAlloc: Record<string, number> = {};
-        for (const alloc of assetAllocation) {
-          if (alloc.assetClass === "cash") continue;
-          finalGoalCorpusAlloc[alloc.assetClass] = goalCorpusTotal * (alloc.percentage / 100);
-        }
-        shortTermCorpusAllocation[goal.goalId] = finalGoalCorpusAlloc;
-
-        // Calculate confidence based on corpus growth alone (no SIP)
-        // Build asset class data map
-        const assetClassDataMap: Record<string, AssetClassData> = {};
-        const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
-        for (const alloc of assetAllocation) {
-          const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
-          if (data) {
-            assetClassDataMap[alloc.assetClass] = data;
-          }
-        }
-
-        // Run Monte Carlo with SIP = 0 to get bounds based on corpus growth alone
-        const monthlySIPByAssetClass: Record<string, number> = {}; // Empty - no SIP
-        const paths = runPortfolioMonteCarloSimulationLognormal(
-          finalGoalCorpusAlloc,
-          monthlySIPByAssetClass,
-          assetAllocation,
-          assetClassDataMap,
-          goal.horizonYears,
-          monteCarloPaths,
-          0 // No step-up for short-term goals
-        );
-
-        const bounds = calculateMonteCarloBounds(paths);
-        const target = getGoalTarget(goal, "basic");
-        const confidencePercent = Math.round(calculateMonteCarloConfidence(paths, target));
-
-        // Store state with SIP = 0
-        this.goalStates.set(`${goal.goalId}_basic`, {
-          goalId: goal.goalId,
-          tier: "basic",
-          allocatedCorpus: goalCorpusTotal,
-          allocatedSIP: 0,
-          assetAllocation,
-          envelopeBounds: bounds,
-          confidencePercent,
-        });
-      }
-    }
+    const shortTermCorpusAllocation = this.handleShortTermGoals(
+      shortTermGoals,
+      assetClasses,
+      customerProfile,
+      { useEnvelope: false, monteCarloPaths, redistributeByAllocation: true }
+    );
 
     // Step 2: Handle long-term goals (>= 3 years) with iterative rebalancing
     let optimizedCorpus: Record<string, Record<string, number>> = {};
-    const sipTolerance = 1000; // ₹1000 tolerance for convergence
+    const sipTolerance = SIP_TOLERANCE;
 
     if (longTermGoals.length > 0) {
       // Calculate available SIP (base + stretch)
-      const stretchSIP = sipInput.monthlySIP * (1 + sipInput.stretchSIPPercent / 100);
-      const availableSIP = Math.max(sipInput.monthlySIP, stretchSIP);
+      const availableSIP = sipInput.monthlySIP * (1 + sipInput.stretchSIPPercent / 100);
 
       // Start with empty corpus for long-term goals (Step 1: assume corpus = 0)
       optimizedCorpus = {};
@@ -814,6 +637,102 @@ export class GoalPlanner {
       goals,
       goalRequirements
     );
+  }
+
+  /**
+   * Handle short-term goals (< 3 years): allocate corpus, set SIP to 0, store state.
+   * Uses envelope for Method 1, Monte Carlo for Method 2 and 3.
+   */
+  private handleShortTermGoals(
+    shortTermGoals: Goal[],
+    assetClasses: AssetClasses,
+    customerProfile: CustomerProfile,
+    options: { useEnvelope: true } | { useEnvelope: false; monteCarloPaths: number; redistributeByAllocation?: boolean }
+  ): Record<string, Record<string, number>> {
+    const shortTermCorpusAllocation: Record<string, Record<string, number>> = {};
+    if (shortTermGoals.length === 0) return shortTermCorpusAllocation;
+
+    const goalCorpusRequirements: Record<string, number> = {};
+    for (const goal of shortTermGoals) {
+      goalCorpusRequirements[goal.goalId] = getGoalTarget(goal, "basic");
+    }
+    const allocatedCorpus = optimizeCorpusAllocation(
+      customerProfile,
+      shortTermGoals,
+      goalCorpusRequirements
+    );
+
+    for (const goal of shortTermGoals) {
+      let goalCorpusAlloc = allocatedCorpus[goal.goalId] || {};
+      const goalCorpusTotal = Object.values(goalCorpusAlloc).reduce((sum, v) => sum + v, 0);
+
+      const assetAllocation = getOptimalAllocation(
+        goal,
+        "basic",
+        customerProfile.corpus.allowedAssetClasses,
+        assetClasses,
+        0
+      );
+
+      if (options.useEnvelope === false && options.redistributeByAllocation) {
+        const finalGoalCorpusAlloc: Record<string, number> = {};
+        for (const alloc of assetAllocation) {
+          if (alloc.assetClass === "cash") continue;
+          finalGoalCorpusAlloc[alloc.assetClass] = goalCorpusTotal * (alloc.percentage / 100);
+        }
+        goalCorpusAlloc = finalGoalCorpusAlloc;
+      }
+
+      shortTermCorpusAllocation[goal.goalId] = goalCorpusAlloc;
+
+      const assetClassDataMap: Record<string, AssetClassData> = {};
+      const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
+      for (const alloc of assetAllocation) {
+        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        if (data) assetClassDataMap[alloc.assetClass] = data;
+      }
+
+      const target = getGoalTarget(goal, "basic");
+      let envelopeBounds: { lower: number; mean: number };
+      let confidencePercent: number;
+
+      if (options.useEnvelope) {
+        envelopeBounds = calculatePortfolioEnvelopeBounds(
+          goalCorpusTotal,
+          0,
+          assetAllocation,
+          assetClassDataMap,
+          goal.horizonYears,
+          0
+        );
+        confidencePercent = calculateConfidencePercent(target, envelopeBounds);
+      } else {
+        const monthlySIPByAssetClass: Record<string, number> = {};
+        const paths = runPortfolioMonteCarloSimulationLognormal(
+          goalCorpusAlloc,
+          monthlySIPByAssetClass,
+          assetAllocation,
+          assetClassDataMap,
+          goal.horizonYears,
+          options.monteCarloPaths,
+          0
+        );
+        envelopeBounds = calculateMonteCarloBounds(paths);
+        confidencePercent = Math.round(calculateMonteCarloConfidence(paths, target));
+      }
+
+      this.goalStates.set(`${goal.goalId}_basic`, {
+        goalId: goal.goalId,
+        tier: "basic",
+        allocatedCorpus: goalCorpusTotal,
+        allocatedSIP: 0,
+        assetAllocation,
+        envelopeBounds,
+        confidencePercent,
+      });
+    }
+
+    return shortTermCorpusAllocation;
   }
 
   /**
@@ -1071,7 +990,7 @@ export class GoalPlanner {
       goal: Goal;
       corpus: number;
       assetAllocation: AssetAllocation[];
-      assetClassDataMap: Record<string, any>;
+      assetClassDataMap: Record<string, AssetClassData>;
     }>();
 
     // Step 1: Calculate required SIP for each goal
@@ -1092,7 +1011,7 @@ export class GoalPlanner {
       );
 
       // Build asset class data map
-      const assetClassDataMap: Record<string, any> = {};
+      const assetClassDataMap: Record<string, AssetClassData> = {};
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
 
       for (const alloc of assetAllocation) {
@@ -1216,9 +1135,6 @@ export class GoalPlanner {
       );
 
       const confidencePercent = calculateConfidencePercent(target, envelopeBounds);
-      
-      // Use confidence as-is; getGoalStatus handles status determination with tolerance
-      const finalConfidence = confidencePercent;
 
       this.goalStates.set(`${goalId}_basic`, {
         goalId,
@@ -1227,7 +1143,7 @@ export class GoalPlanner {
         allocatedSIP,
         assetAllocation,
         envelopeBounds,
-        confidencePercent: finalConfidence,
+        confidencePercent,
       });
     }
 
@@ -1256,7 +1172,7 @@ export class GoalPlanner {
     // Allocate remaining SIP proportionally to ambitious goals
     const ambitiousGoals = goals.filter((g) => {
       const basicState = this.goalStates.get(`${g.goalId}_basic`);
-      return basicState && basicState.confidencePercent >= 90;
+      return basicState && basicState.confidencePercent >= CONFIDENCE_CAN_BE_MET;
     });
 
     if (ambitiousGoals.length === 0) {
@@ -1288,7 +1204,7 @@ export class GoalPlanner {
       );
 
       // Build asset class data map
-      const assetClassDataMap: Record<string, any> = {};
+      const assetClassDataMap: Record<string, AssetClassData> = {};
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
 
       for (const alloc of assetAllocation) {
@@ -1729,7 +1645,7 @@ export class GoalPlanner {
     // Allocate remaining SIP proportionally to ambitious goals
     const ambitiousGoals = goals.filter((g) => {
       const basicState = this.goalStates.get(`${g.goalId}_basic`);
-      return basicState && basicState.confidencePercent >= 90;
+      return basicState && basicState.confidencePercent >= CONFIDENCE_CAN_BE_MET;
     });
 
     if (ambitiousGoals.length === 0) {
@@ -1911,7 +1827,6 @@ export class GoalPlanner {
 
         if (monthData) {
           const portfolioNetworth = monthData.totalNetworth;
-          const remainingNetworth = portfolioNetworth - targetAmount;
 
           // Calculate portfolio bounds (for Methods 1 & 3, we need lower bound)
           let portfolioLower = portfolioNetworth;
@@ -1960,9 +1875,9 @@ export class GoalPlanner {
 
           // Determine status based on confidence (use rounded value for consistency with display)
           const roundedConfidence = Math.round(confidencePercent);
-          if (roundedConfidence >= 90) {
+          if (roundedConfidence >= CONFIDENCE_CAN_BE_MET) {
             status = "can_be_met";
-          } else if (roundedConfidence >= 50) {
+          } else if (roundedConfidence >= CONFIDENCE_AT_RISK_MIN) {
             status = "at_risk";
           } else {
             status = "cannot_be_met";
@@ -2012,7 +1927,6 @@ export class GoalPlanner {
 
         if (monthData) {
           const portfolioNetworth = monthData.totalNetworth;
-          const remainingNetworth = portfolioNetworth - targetAmount;
 
           // Calculate portfolio bounds
           let portfolioLower = portfolioNetworth;
@@ -2060,9 +1974,9 @@ export class GoalPlanner {
 
           // Determine status based on confidence (use rounded value for consistency with display)
           const roundedConfidence = Math.round(confidencePercent);
-          if (roundedConfidence >= 90) {
+          if (roundedConfidence >= CONFIDENCE_CAN_BE_MET) {
             status = "can_be_met";
-          } else if (roundedConfidence >= 50) {
+          } else if (roundedConfidence >= CONFIDENCE_AT_RISK_MIN) {
             status = "at_risk";
           } else {
             status = "cannot_be_met";

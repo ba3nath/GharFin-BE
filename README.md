@@ -187,6 +187,12 @@ curl -X POST http://localhost:3000/api/plan/method3 \
 
 Note: The test script requires `jq` for JSON formatting. Install it with `brew install jq` on macOS.
 
+## Development
+
+- **Run tests**: `npm test` (or `npm test -- --coverage` for coverage). CI can use `npm run build && npm test`.
+- **Run planning script**: `npx ts-node run-planning.ts [input-file]`. Default input is `example-request.json`. Writes `method1-output.json`, `method2-output.json`, and `method3-output.json` to the project root. These files are listed in `.gitignore`.
+- **Request validation**: The API validates request bodies with Zod; invalid payloads return 400 with `error: "Validation failed"` and a `details` array of validation issues.
+
 ## Project Structure
 
 ```
