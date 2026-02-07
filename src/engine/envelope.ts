@@ -243,6 +243,173 @@ export function calculateRequiredSIP(
 }
 
 /**
+ * Calculate minimum monthly SIP needed to achieve a target confidence using the envelope method.
+ * Uses binary search to find the smallest SIP such that confidence >= targetConfidencePct.
+ *
+ * @param targetAmount - Target corpus amount required
+ * @param initialCorpus - Starting corpus amount
+ * @param assetAllocations - Asset allocation configuration
+ * @param assetClassDataMap - Map of asset class names to their data
+ * @param horizonYears - Investment horizon in years
+ * @param targetConfidencePct - Target confidence percentage (default 90)
+ * @param maxIterations - Maximum binary search iterations
+ * @param stepUpPercent - Annual percentage increase in SIP (default 0)
+ * @returns Minimum monthly SIP to achieve target confidence
+ */
+export function calculateMinimumSIPForConfidenceEnvelope(
+  targetAmount: number,
+  initialCorpus: number,
+  assetAllocations: Array<{ assetClass: string; percentage: number }>,
+  assetClassDataMap: Record<string, AssetClassData>,
+  horizonYears: number,
+  targetConfidencePct: number = 90,
+  maxIterations: number = 50,
+  stepUpPercent: number = 0
+): number {
+  const boundsWithZero = calculatePortfolioEnvelopeBounds(
+    initialCorpus,
+    0,
+    assetAllocations,
+    assetClassDataMap,
+    horizonYears,
+    stepUpPercent
+  );
+  const confidenceWithZero = calculateConfidencePercent(targetAmount, boundsWithZero);
+  if (confidenceWithZero >= targetConfidencePct) {
+    return 0;
+  }
+
+  let lowSIP = 0;
+  let highSIP = targetAmount;
+  const tolerance = 100;
+  let iterations = 0;
+
+  while (highSIP - lowSIP > tolerance && iterations < maxIterations) {
+    iterations++;
+    const testSIP = (lowSIP + highSIP) / 2;
+
+    const bounds = calculatePortfolioEnvelopeBounds(
+      initialCorpus,
+      testSIP,
+      assetAllocations,
+      assetClassDataMap,
+      horizonYears,
+      stepUpPercent
+    );
+    const confidence = calculateConfidencePercent(targetAmount, bounds);
+
+    if (confidence >= targetConfidencePct) {
+      highSIP = testSIP;
+    } else {
+      lowSIP = testSIP;
+    }
+  }
+
+  return Math.ceil(highSIP / 1000) * 1000;
+}
+
+/**
+ * Calculate minimum corpus needed to achieve a target confidence using envelope method.
+ * Binary search over corpus with fixed SIP. Returns minimum total corpus.
+ *
+ * @param targetAmount - Target corpus amount required
+ * @param monthlySIP - Fixed monthly SIP
+ * @param referenceCorpusTotal - Reference total corpus (used for upper bound)
+ * @param assetAllocations - Asset allocation configuration
+ * @param assetClassDataMap - Map of asset class names to their data
+ * @param horizonYears - Investment horizon in years
+ * @param targetConfidencePct - Target confidence percentage (default 90)
+ * @param maxIterations - Maximum binary search iterations
+ * @param stepUpPercent - Annual percentage increase in SIP (default 0)
+ * @returns Minimum total corpus to achieve target confidence
+ */
+export function calculateMinimumCorpusForConfidenceEnvelope(
+  targetAmount: number,
+  monthlySIP: number,
+  referenceCorpusTotal: number,
+  assetAllocations: Array<{ assetClass: string; percentage: number }>,
+  assetClassDataMap: Record<string, AssetClassData>,
+  horizonYears: number,
+  targetConfidencePct: number = 90,
+  maxIterations: number = 50,
+  stepUpPercent: number = 0
+): number {
+  const highBound = Math.max(referenceCorpusTotal * 2, targetAmount);
+  let lowCorpus = 0;
+  let highCorpus = highBound;
+  const tolerance = 1000;
+  let iterations = 0;
+
+  while (highCorpus - lowCorpus > tolerance && iterations < maxIterations) {
+    iterations++;
+    const testCorpus = (lowCorpus + highCorpus) / 2;
+
+    const bounds = calculatePortfolioEnvelopeBounds(
+      testCorpus,
+      monthlySIP,
+      assetAllocations,
+      assetClassDataMap,
+      horizonYears,
+      stepUpPercent
+    );
+    const confidence = calculateConfidencePercent(targetAmount, bounds);
+
+    if (confidence >= targetConfidencePct) {
+      highCorpus = testCorpus;
+    } else {
+      lowCorpus = testCorpus;
+    }
+  }
+
+  return Math.round(highCorpus);
+}
+
+/**
+ * Calculates the present value of a target amount, i.e. how much corpus is needed today
+ * to grow to the target at the goal horizon with zero SIP. Uses the expected (mean) portfolio
+ * return. This enables corpus allocation to consider growth: goals with longer horizons
+ * need less corpus per rupee of target than goals with shorter horizons.
+ *
+ * @param targetAmount - Target corpus amount required at goal horizon
+ * @param assetAllocations - Asset allocation for the goal
+ * @param assetClassDataMap - Map of asset class names to their data
+ * @param horizonYears - Investment horizon in years
+ * @returns Present value of the target (corpus needed today)
+ */
+export function calculatePresentValueOfTarget(
+  targetAmount: number,
+  assetAllocations: Array<{ assetClass: string; percentage: number }>,
+  assetClassDataMap: Record<string, AssetClassData>,
+  horizonYears: number
+): number {
+  const months = yearsToMonths(horizonYears);
+  if (months <= 0) return targetAmount;
+
+  let weightedReturn = 0;
+  let totalWeight = 0;
+
+  for (const allocation of assetAllocations) {
+    if (allocation.assetClass === "cash") continue;
+
+    const data = assetClassDataMap[allocation.assetClass];
+    if (!data) continue;
+
+    const weight = allocation.percentage / 100;
+    totalWeight += weight;
+    weightedReturn += (data.avgReturnPct / 100) * weight;
+  }
+
+  if (totalWeight <= 0) return targetAmount;
+
+  const annualReturn = weightedReturn / totalWeight;
+  const monthlyReturn = annualToMonthlyReturn(annualReturn);
+
+  // PV = FV / (1 + r)^n
+  const pv = targetAmount / Math.pow(1 + monthlyReturn, months);
+  return Math.max(0, pv);
+}
+
+/**
  * Calculates the additional SIP required to meet a target after accounting for current progress.
  * Uses probability-based modeling with the lower bound scenario.
  * 

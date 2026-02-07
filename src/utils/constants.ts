@@ -15,5 +15,8 @@ export const SHORT_TERM_HORIZON_YEARS = 3;
 /** Confidence percent at or above this is "can_be_met" for basic tier. */
 export const CONFIDENCE_CAN_BE_MET = 90;
 
+/** Target confidence for corpus reclaim - slightly below 90% to avoid overshooting from rounding. */
+export const CORPUS_RECLAIM_TARGET_CONFIDENCE = 89;
+
 /** Confidence percent at or above this (and below CONFIDENCE_CAN_BE_MET) is "at_risk". */
 export const CONFIDENCE_AT_RISK_MIN = 50;

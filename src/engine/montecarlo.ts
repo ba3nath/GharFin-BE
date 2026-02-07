@@ -669,3 +669,171 @@ export function calculateRequiredSIPMonteCarlo(
   // Round up to nearest 1000
   return Math.ceil(highSIP / 1000) * 1000;
 }
+
+/**
+ * Calculate minimum corpus needed to achieve a target confidence using Monte Carlo.
+ * Uses binary search over corpus scale. Given fixed SIP, finds smallest corpus such that
+ * confidence >= targetConfidencePct.
+ *
+ * @param targetAmount - Target corpus amount required
+ * @param monthlySIPByAssetClass - Monthly SIP by asset class (fixed)
+ * @param referenceCorpusByAssetClass - Reference corpus allocation (proportions used; total scaled)
+ * @param assetAllocations - Asset allocation configuration
+ * @param assetClassDataMap - Map of asset class names to their data
+ * @param horizonYears - Investment horizon in years
+ * @param simulationPaths - Number of Monte Carlo paths
+ * @param targetConfidencePct - Target confidence percentage (default 90)
+ * @param maxIterations - Maximum binary search iterations
+ * @param stepUpPercent - Annual percentage increase in SIP (default 0)
+ * @returns Minimum corpus (by asset class) to achieve target confidence
+ */
+export function calculateMinimumCorpusForConfidenceMonteCarlo(
+  targetAmount: number,
+  monthlySIPByAssetClass: Record<string, number>,
+  referenceCorpusByAssetClass: Record<string, number>,
+  assetAllocations: AssetAllocation[],
+  assetClassDataMap: Record<string, AssetClassData>,
+  horizonYears: number,
+  simulationPaths: number = SIMULATION_COUNT_METHOD2,
+  targetConfidencePct: number = 90,
+  maxIterations: number = 50,
+  stepUpPercent: number = 0
+): Record<string, number> {
+  const totalRef = Object.values(referenceCorpusByAssetClass).reduce((s, v) => s + v, 0);
+  if (totalRef <= 0) {
+    return { ...referenceCorpusByAssetClass };
+  }
+
+  // Binary search over scale: corpus = scale * reference
+  let lowScale = 0;
+  let highScale = 2; // Allow up to 2x in case we need more than reference
+  const tolerance = 0.01;
+  let iterations = 0;
+
+  while (highScale - lowScale > tolerance && iterations < maxIterations) {
+    iterations++;
+    const testScale = (lowScale + highScale) / 2;
+
+    const scaledCorpus: Record<string, number> = {};
+    for (const [ac, amount] of Object.entries(referenceCorpusByAssetClass)) {
+      scaledCorpus[ac] = amount * testScale;
+    }
+
+    const paths = runPortfolioMonteCarloSimulationLognormal(
+      scaledCorpus,
+      monthlySIPByAssetClass,
+      assetAllocations,
+      assetClassDataMap,
+      horizonYears,
+      simulationPaths,
+      stepUpPercent
+    );
+
+    const confidence = calculateMonteCarloConfidence(paths, targetAmount);
+
+    if (confidence >= targetConfidencePct) {
+      highScale = testScale;
+    } else {
+      lowScale = testScale;
+    }
+  }
+
+  const finalScale = highScale;
+  const result: Record<string, number> = {};
+  for (const [ac, amount] of Object.entries(referenceCorpusByAssetClass)) {
+    // Round down to avoid overshooting 90% confidence
+    result[ac] = Math.max(0, Math.floor(amount * finalScale));
+  }
+  return result;
+}
+
+/**
+ * Calculate minimum monthly SIP needed to achieve a target confidence using Monte Carlo.
+ * Uses binary search to find the smallest SIP such that confidence >= targetConfidencePct.
+ *
+ * @param targetAmount - Target corpus amount required
+ * @param initialCorpusByAssetClass - Corpus allocation by asset class
+ * @param assetAllocations - Asset allocation configuration
+ * @param assetClassDataMap - Map of asset class names to their data
+ * @param horizonYears - Investment horizon in years
+ * @param simulationPaths - Number of Monte Carlo paths
+ * @param targetConfidencePct - Target confidence percentage (default 90)
+ * @param maxIterations - Maximum binary search iterations
+ * @param stepUpPercent - Annual percentage increase in SIP (default 0)
+ * @returns Minimum monthly SIP to achieve target confidence
+ */
+export function calculateMinimumSIPForConfidenceMonteCarlo(
+  targetAmount: number,
+  initialCorpusByAssetClass: Record<string, number>,
+  assetAllocations: AssetAllocation[],
+  assetClassDataMap: Record<string, AssetClassData>,
+  horizonYears: number,
+  simulationPaths: number = SIMULATION_COUNT_METHOD2,
+  targetConfidencePct: number = 90,
+  maxIterations: number = 50,
+  stepUpPercent: number = 0
+): number {
+  for (const allocation of assetAllocations) {
+    if (allocation.assetClass === "cash") continue;
+    const data = assetClassDataMap[allocation.assetClass];
+    if (data && !data.volatilityPct) {
+      throw new Error(`volatilityPct is required for asset class ${allocation.assetClass}`);
+    }
+  }
+
+  const totalInitialCorpus = Object.values(initialCorpusByAssetClass).reduce((sum, v) => sum + v, 0);
+
+  if (totalInitialCorpus >= targetAmount) {
+    return 0;
+  }
+
+  const testPaths = runPortfolioMonteCarloSimulationLognormal(
+    initialCorpusByAssetClass,
+    {},
+    assetAllocations,
+    assetClassDataMap,
+    horizonYears,
+    simulationPaths,
+    stepUpPercent
+  );
+  const testConfidence = calculateMonteCarloConfidence(testPaths, targetAmount);
+  if (testConfidence >= targetConfidencePct) {
+    return 0;
+  }
+
+  let lowSIP = 0;
+  let highSIP = targetAmount;
+  const tolerance = 100;
+  let iterations = 0;
+
+  while (highSIP - lowSIP > tolerance && iterations < maxIterations) {
+    iterations++;
+    const testSIP = (lowSIP + highSIP) / 2;
+
+    const monthlySIPByAssetClass: Record<string, number> = {};
+    for (const allocation of assetAllocations) {
+      if (allocation.assetClass === "cash") continue;
+      monthlySIPByAssetClass[allocation.assetClass] = (testSIP * allocation.percentage) / 100;
+    }
+
+    const paths = runPortfolioMonteCarloSimulationLognormal(
+      initialCorpusByAssetClass,
+      monthlySIPByAssetClass,
+      assetAllocations,
+      assetClassDataMap,
+      horizonYears,
+      simulationPaths,
+      stepUpPercent
+    );
+
+    const confidence = calculateMonteCarloConfidence(paths, targetAmount);
+
+    if (confidence >= targetConfidencePct) {
+      highSIP = testSIP;
+    } else {
+      lowSIP = testSIP;
+    }
+  }
+
+  return Math.ceil(highSIP / 1000) * 1000;
+}

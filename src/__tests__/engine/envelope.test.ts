@@ -4,6 +4,7 @@ import {
   calculateConfidencePercent,
   calculateRequiredSIP,
   calculateSIPShortfall,
+  calculatePresentValueOfTarget,
 } from '../../engine/envelope';
 import {
   minimalAssetClass,
@@ -274,5 +275,41 @@ describe('calculateSIPShortfall', () => {
     const negativeReturn = { ...minimalAssetClass, avgReturnPct: -5 };
     const result = calculateSIPShortfall(5000000, 1000000, 10000, negativeReturn, 120);
     expect(result).toBeGreaterThan(0);
+  });
+});
+
+describe('calculatePresentValueOfTarget', () => {
+  const assetAllocations = [{ assetClass: 'largeCap', percentage: 100 }];
+  const assetClassDataMap: Record<string, typeof minimalAssetClass> = {
+    largeCap: minimalAssetClass,
+  };
+
+  it('should return PV less than target for positive return and future horizon', () => {
+    const target = 1000000;
+    const pv = calculatePresentValueOfTarget(target, assetAllocations, assetClassDataMap, 10);
+    expect(pv).toBeLessThan(target);
+    expect(pv).toBeGreaterThan(0);
+  });
+
+  it('should return target for zero horizon', () => {
+    const target = 1000000;
+    const pv = calculatePresentValueOfTarget(target, assetAllocations, assetClassDataMap, 0);
+    expect(pv).toBe(target);
+  });
+
+  it('longer horizon should yield lower PV than shorter horizon', () => {
+    const target = 1000000;
+    const pv5 = calculatePresentValueOfTarget(target, assetAllocations, assetClassDataMap, 5);
+    const pv10 = calculatePresentValueOfTarget(target, assetAllocations, assetClassDataMap, 10);
+    expect(pv10).toBeLessThan(pv5);
+  });
+
+  it('higher return should yield lower PV', () => {
+    const target = 1000000;
+    const lowReturnMap = { largeCap: { ...minimalAssetClass, avgReturnPct: 5 } };
+    const highReturnMap = { largeCap: { ...minimalAssetClass, avgReturnPct: 15 } };
+    const pvLow = calculatePresentValueOfTarget(target, assetAllocations, lowReturnMap, 10);
+    const pvHigh = calculatePresentValueOfTarget(target, assetAllocations, highReturnMap, 10);
+    expect(pvHigh).toBeLessThan(pvLow);
   });
 });

@@ -3,6 +3,7 @@ import {
   calculateMonteCarloBounds,
   calculateMonteCarloConfidence,
   calculateRequiredSIPMonteCarlo,
+  calculateMinimumSIPForConfidenceMonteCarlo,
   validateEnvelope,
 } from '../../engine/montecarlo';
 import {
@@ -300,6 +301,65 @@ describe('calculateRequiredSIPMonteCarlo', () => {
     );
 
     expect(requiredSIP % 1000).toBe(0);
+  });
+});
+
+describe('calculateMinimumSIPForConfidenceMonteCarlo', () => {
+  const allocations: AssetAllocation[] = [
+    { assetClass: 'largeCap', percentage: 100 },
+  ];
+
+  const assetClassDataMap = {
+    largeCap: fullAssetClasses.largeCap['10Y']!,
+  };
+
+  const initialCorpusByAssetClass = {
+    largeCap: 1000000,
+  };
+
+  it('should return 0 when corpus alone yields >= 90% confidence', () => {
+    const highInitialCorpus = { largeCap: 5000000 };
+    const minSIP = calculateMinimumSIPForConfidenceMonteCarlo(
+      5000000,
+      highInitialCorpus,
+      allocations,
+      assetClassDataMap,
+      10,
+      100,
+      90,
+      50,
+      0
+    );
+    expect(minSIP).toBe(0);
+  });
+
+  it('should return minimum SIP that achieves 90% confidence', () => {
+    const minSIP = calculateMinimumSIPForConfidenceMonteCarlo(
+      5000000,
+      initialCorpusByAssetClass,
+      allocations,
+      assetClassDataMap,
+      10,
+      100,
+      90,
+      50,
+      0
+    );
+    expect(minSIP).toBeGreaterThan(0);
+    expect(minSIP % 1000).toBe(0);
+    // Verify that minSIP achieves at least 90% confidence
+    const monthlySIPByAssetClass = { largeCap: minSIP };
+    const paths = runPortfolioMonteCarloSimulationLognormal(
+      initialCorpusByAssetClass,
+      monthlySIPByAssetClass,
+      allocations,
+      assetClassDataMap,
+      10,
+      500,
+      0
+    );
+    const confidence = calculateMonteCarloConfidence(paths, 5000000);
+    expect(confidence).toBeGreaterThanOrEqual(88); // Allow small Monte Carlo variance
   });
 });
 
