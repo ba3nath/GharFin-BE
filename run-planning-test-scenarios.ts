@@ -6,7 +6,7 @@ import { PlanningResult } from "./src/models/PlanningResult";
 import { PlanningTestScenario } from "./src/models/TestScenario";
 
 interface MethodResultsBundle {
-  method1: PlanningResult;
+  method1?: PlanningResult;
   method2: PlanningResult;
   method3: PlanningResult;
 }
@@ -35,7 +35,9 @@ function runScenario(scenario: PlanningTestScenario): MethodResultsBundle {
     sipInput,
   });
 
-  const method1 = planner.planMethod1();
+  const skipMethod1 = process.env.SKIP_METHOD1 === "true" || process.env.SKIP_METHOD1 === "1";
+  
+  const method1 = skipMethod1 ? undefined : planner.planMethod1();
   const method2 = planner.planMethod2();
   const method3 = planner.planMethod3();
 
@@ -203,7 +205,7 @@ function renderScenarioMarkdown(run: ScenarioRunResult): string {
     return lines;
   }
 
-  function summarizeMethod(name: "method1" | "method2" | "method3", label: string) {
+  function summarizeMethod(name: "method2" | "method3", label: string) {
     const result = results[name] as PlanningResult;
     const rows = result.goalFeasibilityTable.rows;
 
@@ -250,7 +252,6 @@ function renderScenarioMarkdown(run: ScenarioRunResult): string {
     ...sipLines,
     ...goalsLines,
     ...comparisonHeader,
-    ...summarizeMethod("method1", "Method 1 – Envelope / current corpus"),
     ...summarizeMethod("method2", "Method 2 – Monte Carlo / rebalanced corpus"),
     ...summarizeMethod("method3", "Method 3 – Monte Carlo / iterative from zero corpus"),
     "",

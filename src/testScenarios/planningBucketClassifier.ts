@@ -11,7 +11,7 @@ export type BucketKey =
   | "bucket_1_2_corpus_or_sip_too_low_cannot_meet";
 
 export interface MethodResultsBundle {
-  method1: PlanningResult;
+  method1?: PlanningResult;
   method2: PlanningResult;
   method3: PlanningResult;
 }
@@ -53,7 +53,7 @@ export function classifyScenarioBucket(run: ScenarioRunResultLike): BucketClassi
   const { corpusProfile, sipProfile } = scenario.classification;
   const sipIsZero = scenario.sipInput.monthlySIP === 0;
 
-  const m1_all_basic_met = getAllBasicMet(results.method1.goalFeasibilityTable.rows);
+  const m1_all_basic_met = results.method1 ? getAllBasicMet(results.method1.goalFeasibilityTable.rows) : false;
   const m2_all_basic_met = getAllBasicMet(results.method2.goalFeasibilityTable.rows);
   const m3_all_basic_met = getAllBasicMet(results.method3.goalFeasibilityTable.rows);
   const any_method_met = m1_all_basic_met || m2_all_basic_met || m3_all_basic_met;
@@ -68,6 +68,7 @@ export function classifyScenarioBucket(run: ScenarioRunResultLike): BucketClassi
   }
 
   // Bucket 4 – Skewed corpus; can be met with SIP (method 1 or 2)
+  // Note: If method1 is skipped, this bucket only checks method2
   if (corpusProfile === "skewed_corpus" && (m1_all_basic_met || m2_all_basic_met)) {
     return {
       bucket: "bucket_4_skewed_can_meet_method1_or_2",
@@ -77,6 +78,7 @@ export function classifyScenarioBucket(run: ScenarioRunResultLike): BucketClassi
   }
 
   // Bucket 5 – Skewed corpus; can be met only in method 3
+  // Note: If method1 is skipped, this bucket only checks method2 and method3
   if (
     corpusProfile === "skewed_corpus" &&
     !m1_all_basic_met &&

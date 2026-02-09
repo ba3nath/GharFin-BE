@@ -60,10 +60,16 @@ const planner = new GoalPlanner({
   sipInput,
 });
 
-console.log("Running Method 1...");
-const method1Result = planner.planMethod1();
-fs.writeFileSync("method1-output.json", JSON.stringify(method1Result, null, 2));
-console.log("Method 1 output saved to method1-output.json");
+const skipMethod1 = process.env.SKIP_METHOD1 === "true" || process.env.SKIP_METHOD1 === "1";
+
+if (!skipMethod1) {
+  console.log("Running Method 1...");
+  const method1Result = planner.planMethod1();
+  fs.writeFileSync("method1-output.json", JSON.stringify(method1Result, null, 2));
+  console.log("Method 1 output saved to method1-output.json");
+} else {
+  console.log("Skipping Method 1 (SKIP_METHOD1 flag set)");
+}
 
 console.log("Running Method 2...");
 const method2Result = planner.planMethod2();

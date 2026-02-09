@@ -73,14 +73,6 @@ export function generateAllMethodGraphs(
     }
   };
 
-  const method1Result = runMethod(
-    "Method 1",
-    () => planner.planMethod1(),
-    path.join(process.cwd(), prefix ? `${prefix}method1-output.json` : "method1-output.json")
-  );
-  generateGraphsForMethod("method1", method1Result);
-  console.log("");
-
   const method2Result = runMethod(
     "Method 2",
     () => planner.planMethod2(monteCarloPaths.method2 ?? 1000),
