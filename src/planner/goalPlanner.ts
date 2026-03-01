@@ -1,6 +1,7 @@
 import { CustomerProfile, getTotalCorpus } from "../models/CustomerProfile";
 import { Goal, getBasicTiersSorted, getGoalTarget } from "../models/Goal";
 import { AssetClasses, getAssetClassData, AssetClassData } from "../models/AssetClass";
+import type { ProfileType } from "../models/AssetsConfig";
 import {
   calculatePortfolioEnvelopeBounds,
   calculateConfidencePercent,
@@ -68,12 +69,15 @@ export interface SIPInput {
 
 /**
  * Planning context containing all inputs for goal planning.
+ * When assetClassesByProfile is set (request used assets), each goal uses its profile_type to pick conservative/realistic/aggressive assumptions.
  */
 interface PlanningContext {
   assetClasses: AssetClasses;
   customerProfile: CustomerProfile;
   goals: Goal[];
   sipInput: SIPInput;
+  /** Per-profile AssetClasses when request used assets; used per-goal by profile_type. */
+  assetClassesByProfile?: Record<ProfileType, AssetClasses>;
 }
 
 /**
@@ -110,6 +114,18 @@ export class GoalPlanner {
   }
 
   /**
+   * Asset classes to use for a goal: when assetClassesByProfile is present, use goal's profile_type (default conservative).
+   */
+  private getAssetClassesForGoal(goal: Goal): AssetClasses {
+    const { assetClasses, assetClassesByProfile } = this.context;
+    if (assetClassesByProfile) {
+      const profile: ProfileType = goal.profile_type ?? "conservative";
+      return assetClassesByProfile[profile];
+    }
+    return assetClasses;
+  }
+
+  /**
    * Plan Method 1: With current corpus allocation
    */
   planMethod1(maxIterations: number = DEFAULT_MAX_ITERATIONS, monteCarloPaths: number = SIMULATION_COUNT_LITE): Method1Result {
@@ -125,7 +141,6 @@ export class GoalPlanner {
 
     const shortTermCorpusAllocation = this.handleShortTermGoals(
       shortTermGoals,
-      assetClasses,
       customerProfile,
       { useEnvelope: true }
     );
@@ -307,7 +322,6 @@ export class GoalPlanner {
 
     const shortTermCorpusAllocation = this.handleShortTermGoals(
       shortTermGoals,
-      assetClasses,
       customerProfile,
       { useEnvelope: false, monteCarloPaths }
     );
@@ -492,7 +506,6 @@ export class GoalPlanner {
 
     const shortTermCorpusAllocation = this.handleShortTermGoals(
       shortTermGoals,
-      assetClasses,
       customerProfile,
       { useEnvelope: false, monteCarloPaths, redistributeByAllocation: true }
     );
@@ -721,19 +734,17 @@ export class GoalPlanner {
     return this.computePVBasedGoalRequirementsForProfile(
       goals,
       totalCorpus,
-      this.context.customerProfile,
-      this.context.assetClasses
+      this.context.customerProfile
     );
   }
 
   /**
-   * Computes PV-based requirements with explicit profile and asset classes.
+   * Computes PV-based requirements; uses per-goal asset classes (profile_type) when available.
    */
   private computePVBasedGoalRequirementsForProfile(
     goals: Goal[],
     totalCorpus: number,
-    customerProfile: CustomerProfile,
-    assetClasses: AssetClasses
+    customerProfile: CustomerProfile
   ): Record<string, number> {
     const goalRequirements: Record<string, number> = {};
 
@@ -744,18 +755,19 @@ export class GoalPlanner {
 
     const pvByGoal: Record<string, number> = {};
     for (const goal of goals) {
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const target = getGoalTarget(goal, "basic");
       const assetAllocation = getOptimalAllocation(
         goal,
         "basic",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses,
+        assetClassesForGoal,
         0
       );
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
       const assetClassDataMap: Record<string, AssetClassData> = {};
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) assetClassDataMap[alloc.assetClass] = data;
       }
       pvByGoal[goal.goalId] = calculatePresentValueOfTarget(
@@ -781,7 +793,6 @@ export class GoalPlanner {
    */
   private handleShortTermGoals(
     shortTermGoals: Goal[],
-    assetClasses: AssetClasses,
     customerProfile: CustomerProfile,
     options: { useEnvelope: true } | { useEnvelope: false; monteCarloPaths: number; redistributeByAllocation?: boolean }
   ): Record<string, Record<string, number>> {
@@ -792,8 +803,7 @@ export class GoalPlanner {
     const goalCorpusRequirements = this.computePVBasedGoalRequirementsForProfile(
       shortTermGoals,
       totalCorpus,
-      customerProfile,
-      assetClasses
+      customerProfile
     );
     const allocatedCorpus = optimizeCorpusAllocation(
       customerProfile,
@@ -802,6 +812,7 @@ export class GoalPlanner {
     );
 
     for (const goal of shortTermGoals) {
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       let goalCorpusAlloc = allocatedCorpus[goal.goalId] || {};
       const goalCorpusTotal = Object.values(goalCorpusAlloc).reduce((sum, v) => sum + v, 0);
 
@@ -809,7 +820,7 @@ export class GoalPlanner {
         goal,
         "basic",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses,
+        assetClassesForGoal,
         0
       );
 
@@ -827,7 +838,7 @@ export class GoalPlanner {
       const assetClassDataMap: Record<string, AssetClassData> = {};
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) assetClassDataMap[alloc.assetClass] = data;
       }
 
@@ -913,6 +924,7 @@ export class GoalPlanner {
     const goalAllocations: Record<string, Record<string, number>> = {};
 
     for (const goal of goals) {
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const goalCorpus = goalCorpusRequirements[goal.goalId] || 0;
       const goalSIP = sipAllocations.get(goal.goalId) || 0;
       
@@ -921,7 +933,7 @@ export class GoalPlanner {
         goal,
         "basic",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses
+        assetClassesForGoal
       );
 
       // Allocate corpus by asset class to match this goal's own SIP allocation %
@@ -958,6 +970,7 @@ export class GoalPlanner {
 
     // Step 1: Calculate required SIP for each goal using Monte Carlo
     for (const goal of goals) {
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const goalCorpusAllocation = optimizedCorpus[goal.goalId] || {};
       const target = getGoalTarget(goal, "basic");
 
@@ -966,7 +979,7 @@ export class GoalPlanner {
         goal,
         "basic",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses
+        assetClassesForGoal
       );
 
       // Build asset class data map
@@ -974,7 +987,7 @@ export class GoalPlanner {
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
 
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) {
           assetClassDataMap[alloc.assetClass] = data;
         }
@@ -1114,6 +1127,7 @@ export class GoalPlanner {
 
     // Step 1: Calculate required SIP for each goal
     for (const goal of goals) {
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const goalCorpusAllocation = optimizedCorpus[goal.goalId] || {};
       const goalCorpus = Object.values(goalCorpusAllocation).reduce(
         (sum: number, v: number) => sum + v,
@@ -1126,7 +1140,7 @@ export class GoalPlanner {
         goal,
         "basic",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses
+        assetClassesForGoal
       );
 
       // Build asset class data map
@@ -1134,7 +1148,7 @@ export class GoalPlanner {
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
 
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) {
           assetClassDataMap[alloc.assetClass] = data;
         }
@@ -1318,6 +1332,7 @@ export class GoalPlanner {
     // Compute minimum SIP for 90% confidence (envelope) per ambitious goal
     const minSIPs = new Map<string, number>();
     for (const goal of ambitiousGoals) {
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const goalCorpusAllocation = optimizedCorpus[goal.goalId] || {};
       const goalCorpus = Object.values(goalCorpusAllocation).reduce(
         (sum: number, v: number) => sum + v,
@@ -1328,12 +1343,12 @@ export class GoalPlanner {
         goal,
         "ambitious",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses
+        assetClassesForGoal
       );
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
       const assetClassDataMap: Record<string, AssetClassData> = {};
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) assetClassDataMap[alloc.assetClass] = data;
       }
       const minSIP = calculateMinimumSIPForConfidenceEnvelope(
@@ -1363,6 +1378,7 @@ export class GoalPlanner {
 
     for (let i = 0; i < ambitiousGoals.length; i++) {
       const goal = ambitiousGoals[i];
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const allocatedSIP = allocations.get(goal.goalId) ?? 0;
 
       const goalCorpusAllocation = optimizedCorpus[goal.goalId] || {};
@@ -1377,7 +1393,7 @@ export class GoalPlanner {
         goal,
         "ambitious",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses
+        assetClassesForGoal
       );
 
       // Build asset class data map
@@ -1385,7 +1401,7 @@ export class GoalPlanner {
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
 
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) {
           assetClassDataMap[alloc.assetClass] = data;
         }
@@ -1679,6 +1695,7 @@ export class GoalPlanner {
 
     // Step 1: Calculate required SIP for each goal using Monte Carlo
     for (const goal of goals) {
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const goalCorpusAllocation = optimizedCorpus[goal.goalId] || {};
       const target = getGoalTarget(goal, "basic");
 
@@ -1687,7 +1704,7 @@ export class GoalPlanner {
         goal,
         "basic",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses
+        assetClassesForGoal
       );
 
       // Build asset class data map
@@ -1695,7 +1712,7 @@ export class GoalPlanner {
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
 
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) {
           assetClassDataMap[alloc.assetClass] = data;
         }
@@ -1848,18 +1865,19 @@ export class GoalPlanner {
     // Compute minimum SIP for 90% confidence for each ambitious goal
     const minSIPs = new Map<string, number>();
     for (const goal of ambitiousGoals) {
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const goalCorpusAllocation = optimizedCorpus[goal.goalId] || {};
       const target = getGoalTarget(goal, "ambitious");
       const assetAllocation = getOptimalAllocation(
         goal,
         "ambitious",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses
+        assetClassesForGoal
       );
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
       const assetClassDataMap: Record<string, AssetClassData> = {};
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) assetClassDataMap[alloc.assetClass] = data;
       }
       const minSIP = calculateMinimumSIPForConfidenceMonteCarlo(
@@ -1890,6 +1908,7 @@ export class GoalPlanner {
 
     for (let i = 0; i < ambitiousGoals.length; i++) {
       const goal = ambitiousGoals[i];
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const allocatedSIP = allocations.get(goal.goalId) ?? 0;
 
       const goalCorpusAllocation = optimizedCorpus[goal.goalId] || {};
@@ -1900,7 +1919,7 @@ export class GoalPlanner {
         goal,
         "ambitious",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses
+        assetClassesForGoal
       );
 
       // Build asset class data map
@@ -1908,7 +1927,7 @@ export class GoalPlanner {
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
 
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) {
           assetClassDataMap[alloc.assetClass] = data;
         }
@@ -2019,6 +2038,7 @@ export class GoalPlanner {
         continue;
       }
 
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const goalCorpusAllocation = optimizedCorpus[goal.goalId] || {};
       const target = getGoalTarget(goal, "basic");
       const assetAllocation = basicState.assetAllocation;
@@ -2026,7 +2046,7 @@ export class GoalPlanner {
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
       const assetClassDataMap: Record<string, AssetClassData> = {};
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) {
           assetClassDataMap[alloc.assetClass] = data;
         }
@@ -2139,6 +2159,7 @@ export class GoalPlanner {
         continue;
       }
 
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const target = getGoalTarget(goal, "basic");
       const allocatedSIP = sipAllocations.get(goal.goalId) ?? 0;
       const assetAllocation = basicState.assetAllocation;
@@ -2146,7 +2167,7 @@ export class GoalPlanner {
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
       const assetClassDataMap: Record<string, AssetClassData> = {};
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) assetClassDataMap[alloc.assetClass] = data;
       }
 
@@ -2225,6 +2246,7 @@ export class GoalPlanner {
       const totalToRestore = Object.values(surplusByAssetClass).reduce((s, v) => s + v, 0);
       if (totalToRestore > 0 && totalAllocated > 0) {
         for (const goal of goals) {
+          const assetClassesForGoal = this.getAssetClassesForGoal(goal);
           const current = result[goal.goalId] || {};
           const currentTotal = Object.values(current).reduce((s, v) => s + v, 0);
           const share = currentTotal / totalAllocated;
@@ -2233,7 +2255,7 @@ export class GoalPlanner {
             goal,
             "basic",
             customerProfile.corpus.allowedAssetClasses,
-            assetClasses
+            assetClassesForGoal
           );
           const updated: Record<string, number> = {};
           for (const alloc of assetAllocation) {
@@ -2253,16 +2275,17 @@ export class GoalPlanner {
 
     const pvByGoal = new Map<string, number>();
     for (const goal of goalsNeedingCorpus) {
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const assetAllocation = getOptimalAllocation(
         goal,
         "basic",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses
+        assetClassesForGoal
       );
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
       const assetClassDataMap: Record<string, AssetClassData> = {};
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) assetClassDataMap[alloc.assetClass] = data;
       }
       const pv = calculatePresentValueOfTarget(
@@ -2276,13 +2299,14 @@ export class GoalPlanner {
     const totalPV = Array.from(pvByGoal.values()).reduce((s, v) => s + v, 0);
 
     for (const goal of goalsNeedingCorpus) {
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const pv = pvByGoal.get(goal.goalId) || 0;
       const share = totalPV > 0 ? (pv / totalPV) * totalSurplus : totalSurplus / goalsNeedingCorpus.length;
       const assetAllocation = getOptimalAllocation(
         goal,
         "basic",
         customerProfile.corpus.allowedAssetClasses,
-        assetClasses
+        assetClassesForGoal
       );
       const existing = result[goal.goalId] || {};
       const updated: Record<string, number> = {};
@@ -2307,6 +2331,7 @@ export class GoalPlanner {
       );
       if (totalAlloc > 0) {
         for (const goal of goals) {
+          const assetClassesForGoal = this.getAssetClassesForGoal(goal);
           const cur = result[goal.goalId] || {};
           const curTot = Object.values(cur).reduce((a, v) => a + v, 0);
           const sh = curTot / totalAlloc;
@@ -2315,7 +2340,7 @@ export class GoalPlanner {
             goal,
             "basic",
             customerProfile.corpus.allowedAssetClasses,
-            assetClasses
+            assetClassesForGoal
           );
           const upd: Record<string, number> = {};
           for (const alloc of assetAlloc) {
@@ -2338,6 +2363,7 @@ export class GoalPlanner {
       const newCorpus = result[goal.goalId] || {};
       if (!basicState) continue;
 
+      const assetClassesForGoal = this.getAssetClassesForGoal(goal);
       const target = getGoalTarget(goal, "basic");
       const allocatedSIP = sipAllocations.get(goal.goalId) ?? 0;
       const assetAllocation = basicState.assetAllocation;
@@ -2345,7 +2371,7 @@ export class GoalPlanner {
       const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
       const assetClassDataMap: Record<string, AssetClassData> = {};
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClassesForGoal, alloc.assetClass, timeHorizon);
         if (data) assetClassDataMap[alloc.assetClass] = data;
       }
 

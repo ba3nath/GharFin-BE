@@ -90,6 +90,24 @@ const debtHeavyProfile: CustomerProfile = makeCustomerProfile({
   },
 });
 
+// Conservative customer: debt-heavy, minimal equity (for conservative + aggressive goal scenarios)
+const conservativeCorpusProfile: CustomerProfile = makeCustomerProfile({
+  corpusByAssetClass: {
+    bond: 2500000,
+    largeCap: 400000,
+    midCap: 100000,
+  },
+});
+
+// Conservative customer with larger corpus (for reachable aggressive-goals scenario)
+const conservativeCorpusReachableProfile: CustomerProfile = makeCustomerProfile({
+  corpusByAssetClass: {
+    bond: 8000000,
+    largeCap: 1500000,
+    midCap: 500000,
+  },
+});
+
 // Cash-only emergency corpus
 const cashOnlyProfile: CustomerProfile = makeCustomerProfile({
   corpusByAssetClass: {
@@ -407,6 +425,56 @@ export const planningTestScenarios: PlanningTestScenario[] = [
     meta: {
       designedReachableBasic: true,
       notes: "Bucket 7: SIP not needed; at least one method meets all basic goals with corpus alone.",
+    },
+  },
+
+  // Conservative customer + aggressive goals (unreachable)
+  {
+    id: "conservative_customer_aggressive_goals_unreachable",
+    name: "Conservative customer, aggressive goals – unreachable",
+    kind: "edge_case",
+    classification: {
+      corpusProfile: "balanced_corpus",
+      sipProfile: "sip_too_low",
+      goalProfile: "unreachable_goals",
+      timelineProfile: "mixed",
+    },
+    description:
+      "Debt-heavy (conservative) corpus with low SIP; five aggressive goals (retirement, education, house, car, medical) cannot all be met at basic tier.",
+    assetClasses: fullAssetClasses,
+    customerProfile: conservativeCorpusProfile,
+    goals: makeGoals(retirement30Y, education12Y, house10Y, car3Y, medical5Y),
+    sipInput: sipTooLow,
+    meta: {
+      designedReachableBasic: false,
+      notes: "Conservative customer + aggressive goals (5); SIP too low – basic tiers unreachable.",
+      edgeTags: ["method_divergence"],
+      edgeSummary: "Conservative corpus, aggressive multi-goal; unreachable by design.",
+    },
+  },
+
+  // Conservative customer + aggressive goals (reachable)
+  {
+    id: "conservative_customer_aggressive_goals_reachable",
+    name: "Conservative customer, aggressive goals – reachable",
+    kind: "edge_case",
+    classification: {
+      corpusProfile: "balanced_corpus",
+      sipProfile: "sip_stretch",
+      goalProfile: "reachable_goals",
+      timelineProfile: "mixed",
+    },
+    description:
+      "Debt-heavy (conservative) corpus with stretch SIP; five aggressive goals (retirement, education, house, car, medical) can be met at basic tier.",
+    assetClasses: fullAssetClasses,
+    customerProfile: conservativeCorpusReachableProfile,
+    goals: makeGoals(retirement30Y, education12Y, house10Y, car3Y, medical5Y),
+    sipInput: sipStretchHigh,
+    meta: {
+      designedReachableBasic: true,
+      notes: "Conservative customer + aggressive goals (5); sufficient corpus and SIP – basic tiers reachable.",
+      edgeTags: ["method_divergence"],
+      edgeSummary: "Conservative corpus, aggressive multi-goal; reachable with stretch SIP.",
     },
   },
 ];

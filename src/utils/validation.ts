@@ -1,4 +1,17 @@
 import { z } from "zod";
+import {
+  CustomerProfileInputSchema,
+  mapCustomerProfileInputToInternal,
+} from "../models/CustomerProfileInput";
+import type { CustomerProfile } from "../models/CustomerProfile";
+import type { AssetClasses } from "../models/AssetClass";
+import {
+  AssetsConfigSchema,
+  assetsConfigToAssetClasses,
+  buildAssetClassesByProfile,
+  getBucketToCategories,
+} from "../models/AssetsConfig";
+import type { AssetBucket, ProfileType } from "../models/AssetsConfig";
 
 /**
  * Zod validation schemas for input data validation.
@@ -63,14 +76,22 @@ export const GoalTierSchema = z.object({
 });
 
 /**
+ * Profile type for return/volatility assumption (conservative = lower return/higher vol, etc.).
+ * Default when omitted is conservative.
+ */
+export const ProfileTypeSchema = z.enum(["conservative", "realistic", "aggressive"]);
+
+/**
  * Schema for a financial goal with horizon and tier targets.
  * Priority is now at the tier level, not at the goal level.
+ * profile_type (optional) drives which end of asset return/volatility ranges is used for this goal; default conservative.
  */
 export const GoalSchema = z.object({
   goalId: z.string(),
   goalName: z.string(),
   horizonYears: z.number().min(0),
   amountVariancePct: z.number().min(0).max(100),
+  profile_type: ProfileTypeSchema.optional(),
   tiers: z.object({
     basic: GoalTierSchema,
     ambitious: GoalTierSchema,
@@ -95,11 +116,11 @@ export const SIPInputSchema = z.object({
 
 /**
  * Schema for planning API request body (Method 1, 2, 3).
- * Optional fields have defaults applied in routes.
+ * Requires assets (benchmark + mutual_fund_categories) and customer_profile.
  */
 export const PlanningRequestSchema = z.object({
-  assetClasses: AssetClassesSchema,
-  customerProfile: CustomerProfileSchema,
+  assets: AssetsConfigSchema,
+  customer_profile: CustomerProfileInputSchema,
   goals: GoalsSchema,
   monthlySIP: z.number().min(0),
   stretchSIPPercent: z.number().min(0).max(100).optional(),
@@ -109,3 +130,64 @@ export const PlanningRequestSchema = z.object({
 });
 
 export type PlanningRequest = z.infer<typeof PlanningRequestSchema>;
+
+/**
+ * Normalized planning request: always has customerProfile (internal shape) and assetClasses (from assets).
+ */
+export interface NormalizedPlanningRequest {
+  assetClasses: AssetClasses;
+  customerProfile: CustomerProfile;
+  goals: z.infer<typeof GoalsSchema>;
+  monthlySIP: number;
+  stretchSIPPercent?: number;
+  annualStepUpPercent?: number;
+  monteCarloPaths?: number;
+  maxIterations?: number;
+  bucketToCategories: Record<AssetBucket, string[]>;
+  benchmark: { name: string; beta_reference: number };
+  assetClassesByProfile: Record<ProfileType, AssetClasses>;
+}
+
+/**
+ * Parse request body and return normalized request.
+ * Requires assets and customer_profile.
+ */
+export function normalizePlanningRequest(body: unknown): {
+  success: true;
+  data: NormalizedPlanningRequest;
+} | {
+  success: false;
+  error: z.ZodError;
+} {
+  const parsed = PlanningRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error };
+  }
+  const { assets, customer_profile } = parsed.data;
+  const customerProfileType: ProfileType =
+    (customer_profile.profile_type as ProfileType) ?? "conservative";
+  const assetClasses = assetsConfigToAssetClasses(assets, customerProfileType);
+  const bucketToCategories = getBucketToCategories(assets);
+  const assetClassesByProfile = buildAssetClassesByProfile(assets);
+  const customerProfile = mapCustomerProfileInputToInternal(
+    customer_profile,
+    assetClasses,
+    { bucketToCategories }
+  );
+  return {
+    success: true,
+    data: {
+      assetClasses,
+      customerProfile,
+      goals: parsed.data.goals,
+      monthlySIP: parsed.data.monthlySIP,
+      stretchSIPPercent: parsed.data.stretchSIPPercent,
+      annualStepUpPercent: parsed.data.annualStepUpPercent,
+      monteCarloPaths: parsed.data.monteCarloPaths,
+      maxIterations: parsed.data.maxIterations,
+      bucketToCategories,
+      benchmark: assets.benchmark,
+      assetClassesByProfile,
+    },
+  };
+}

@@ -52,11 +52,21 @@ Returns information about the Method 1 endpoint (request format, required fields
 
 Calculate SIP allocation with current corpus allocation.
 
-**Request Body:**
+**Request Body:** The API expects `assets` (benchmark + mutual_fund_categories) and `customer_profile` (financials, stability, risk_tolerance, liquidity_preferences), not raw assetClasses/customerProfile:
+
 ```json
 {
-  "assetClasses": { ... },
-  "customerProfile": { ... },
+  "assets": {
+    "benchmark": { "name": "Nifty 50", "beta_reference": 1 },
+    "mutual_fund_categories": [ ... ]
+  },
+  "customer_profile": {
+    "financials": { ... },
+    "stability": { ... },
+    "risk_tolerance": { ... },
+    "liquidity_preferences": { ... },
+    "asOfDate": "2026-01-01"
+  },
   "goals": {
     "goals": [
       {
@@ -65,14 +75,8 @@ Calculate SIP allocation with current corpus allocation.
         "horizonYears": 10,
         "amountVariancePct": 5,
         "tiers": {
-          "basic": {
-            "targetAmount": 5000000,
-            "priority": 1
-          },
-          "ambitious": {
-            "targetAmount": 8000000,
-            "priority": 2
-          }
+          "basic": { "targetAmount": 5000000, "priority": 1 },
+          "ambitious": { "targetAmount": 8000000, "priority": 2 }
         }
       }
     ]
@@ -190,18 +194,76 @@ Note: The test script requires `jq` for JSON formatting. Install it with `brew i
 ## Development
 
 - **Run tests**: `npm test` (or `npm test -- --coverage` for coverage). CI can use `npm run build && npm test`.
-- **Run planning script**: `npx ts-node run-planning.ts [input-file]`. Default input is `example-request.json`. Writes `method1-output.json`, `method2-output.json`, and `method3-output.json` to the project root. These files are listed in `.gitignore`.
 - **Request validation**: The API validates request bodies with Zod; invalid payloads return 400 with `error: "Validation failed"` and a `details` array of validation issues.
+
+### Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npx ts-node run-planning.ts [input-file]` | Run all three planning methods; default input `example-request.json`. Writes `method1-output.json`, `method2-output.json`, `method3-output.json` (gitignored). |
+| `npx ts-node generate-graphs.ts [input-file]` | Run planning and generate networth projection HTML graphs in `graphs/` (gitignored). |
+| `npm run generate-graphs` | Same as above (uses `example-request.json`). |
+| `npx ts-node run-planning-test-scenarios.ts` | Run curated scenarios (from `src/scenarios/planningTestScenarios.ts`) through all methods; writes `docs/planning-test-scenarios-output.json` and `docs/planning-test-report.md` (gitignored). |
+| `npx ts-node run-planning-bucket-summary.ts` | Reads scenario output, classifies by bucket, writes `docs/planning-bucket-summary.json` and `docs/planning-bucket-summary.md` (gitignored). |
+| `npx ts-node generate-test-scenario-graphs.ts` | Generates graphs for the test scenario in `test-cannot-be-met-scenario.json`; writes `graphs/test-scenario-*.html` and `test-scenario-method*-output.json` (gitignored). |
+
+## Code Flow Analysis
+
+### Entry points
+
+| Entry | File | Description |
+|-------|------|-------------|
+| **HTTP server** | `src/api/server.ts` | Express app: mounts `/api` routes, JSON body parsing, CORS. `npm start` runs `node dist/api/server.js`. |
+| **CLI planning** | `run-planning.ts` | Reads JSON (default `example-request.json`), validates, runs all three methods, writes `method1-output.json`, `method2-output.json`, `method3-output.json`. |
+| **Graph generation** | `generate-graphs.ts` | Same input as CLI; runs planning and generates HTML networth graphs via `generate-graphs-helper.ts` into `graphs/`. |
+
+### Request → response flow (API)
+
+1. **Request** → `src/api/routes.ts` (e.g. `POST /api/plan/method1`).
+2. **Validation** → `src/utils/validation.ts`: `normalizePlanningRequest(body)` parses with Zod (`PlanningRequestSchema`), maps `assets` → `AssetClasses` and `customer_profile` → `CustomerProfile`, returns `NormalizedPlanningRequest`.
+3. **Planning** → `src/planner/goalPlanner.ts`: `GoalPlanner` is constructed with asset classes, customer profile, goals, SIP input; `planMethod1()`, `planMethod2()`, or `planMethod3()` returns a `PlanningResult`.
+4. **Engine usage** (inside planner):
+   - **Envelope** (`src/engine/envelope.ts`): bounds, confidence, required SIP, min SIP/corpus for 90% confidence.
+   - **Portfolio** (`src/engine/portfolio.ts`): time-based allocation, Sharpe optimization, weighted metrics.
+   - **Monte Carlo** (`src/engine/montecarlo.ts`): Method 2/3 simulations, validation, lite multi-goal runs.
+   - **Rebalancer** (`src/engine/rebalancer.ts`): corpus rebalance to SIP allocation, `optimizeCorpusAllocation`.
+   - **Networth** (`src/engine/networthProjection.ts`): monthly networth projection for reporting.
+5. **Response** → JSON `PlanningResult` (feasibility table, SIP plan, SIP schedule, corpus allocation).
+
+### Input models
+
+- **API/CLI request** (validated by `src/utils/validation.ts`):
+  - **`assets`** → `AssetsConfig` (`src/models/AssetsConfig.ts`): `benchmark` + `mutual_fund_categories` (return/volatility ranges, bucket). Normalized to `AssetClasses` per profile (conservative/realistic/aggressive).
+  - **`customer_profile`** → `CustomerProfileInput` (`src/models/CustomerProfileInput.ts`): `financials`, `stability`, `risk_tolerance`, `liquidity_preferences`, optional `profile_type`. Mapped to internal `CustomerProfile` (corpus, allowed asset classes, etc.).
+  - **`goals`** → `GoalsSchema`: array of goals; each goal has `goalId`, `goalName`, `horizonYears`, `amountVariancePct`, optional `profile_type`, and `tiers.basic` / `tiers.ambitious` with `targetAmount` and `priority`.
+  - **SIP params**: `monthlySIP`, optional `stretchSIPPercent`, `annualStepUpPercent`; Method 2/3 optional `monteCarloPaths`, `maxIterations`.
+
+Internal models used by the planner (in `src/models/`): `Goal`, `CustomerProfile`, `AssetClass` / `AssetClasses`, plus envelope/portfolio types.
+
+### Reporting and output modules
+
+- **Structured result** (`src/models/PlanningResult.ts`): `Method1Result` | `Method2Result` | `Method3Result` — each includes:
+  - **Goal feasibility** → `GoalFeasibilityTable` (`src/models/GoalFeasibilityTable.ts`): rows with goal/tier, status (`can_be_met` | `at_risk` | `cannot_be_met`), confidence %, target, projected corpus (lower/mean).
+  - **SIP allocation** → `SIPPlan` (`src/models/SIPPlan.ts`): first-month allocation % by goal/tier/asset.
+  - **SIP schedule** → `SIPAllocationSchedule` (`src/models/SIPAllocationSchedule.ts`): snapshots over time (e.g. step-up events).
+  - **Corpus allocation** → `Record<goalId, Record<assetClass, amount>>`.
+
+- **HTML/networth graphs**:
+  - **`src/utils/graphGenerator.ts`**: `generateNetworthGraphHTML(projectionData, outputPath)` — builds Chart.js HTML from `NetworthProjectionData` (from `src/engine/networthProjection.ts`).
+  - **`generate-graphs-helper.ts`**: runs Method 1/2/3, calls `calculateNetworthProjection()` per method and tier (basic/ambitious), then `generateNetworthGraphHTML()`; writes HTML under `graphs/` (and optionally JSON).
+
+So: **entry** = server or CLI/script; **flow** = routes → validation → GoalPlanner → engine (envelope, portfolio, montecarlo, rebalancer, networth); **input models** = AssetsConfig, CustomerProfileInput, goals + SIP params; **reporting** = PlanningResult (feasibility, SIP plan/schedule, corpus) and graphGenerator + networth projection for HTML.
 
 ## Project Structure
 
 ```
 src/
-├── models/          # Data models
-├── engine/          # Core engines (envelope, portfolio, montecarlo, rebalancer)
-├── planner/         # Goal planner
-├── api/             # REST API endpoints
-└── utils/           # Utility functions
+├── models/          # Data models (input: AssetsConfig, CustomerProfileInput; output: PlanningResult, GoalFeasibilityTable, SIPPlan, SIPAllocationSchedule)
+├── engine/          # Core engines (envelope, portfolio, montecarlo, rebalancer, networthProjection)
+├── planner/         # Goal planner (orchestrates engines, produces PlanningResult)
+├── scenarios/      # Planning scenario definitions and bucket classifier (used by run-planning-test-scenarios, run-planning-bucket-summary)
+├── api/             # REST API (server.ts, routes.ts)
+└── utils/           # Validation, graphGenerator, time, math, constants
 ```
 
 ## Technology Stack

@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { GoalPlanner, SIPInput } from "../planner/goalPlanner";
 import { validateEnvelope } from "../engine/montecarlo";
 import { AssetAllocation } from "../engine/portfolio";
-import { PlanningRequestSchema } from "../utils/validation";
+import { normalizePlanningRequest } from "../utils/validation";
 
 const router = Router();
 
@@ -23,15 +23,15 @@ router.get("/plan/method1", (req: Request, res: Response) => {
     description: "Calculate SIP allocation with current corpus allocation",
     endpoint: "/api/plan/method1",
     requiredFields: [
-      "assetClasses",
-      "customerProfile",
+      "assets (benchmark + mutual_fund_categories)",
+      "customer_profile",
       "goals",
       "monthlySIP",
       "stretchSIPPercent (optional)",
       "annualStepUpPercent (optional)",
     ],
-    example: "See example-request.json file in the project root",
-    note: "This endpoint requires a POST request with JSON body. Use a tool like curl, Postman, or fetch API.",
+    example: "See example-request.json in the project root",
+    note: "POST with JSON body. Requires assets and customer_profile.",
   });
 });
 
@@ -41,18 +41,12 @@ router.get("/plan/method1", (req: Request, res: Response) => {
  */
 router.post("/plan/method1", (req: Request, res: Response) => {
   try {
-    const parsed = PlanningRequestSchema.safeParse(req.body);
+    const parsed = normalizePlanningRequest(req.body);
     if (!parsed.success) {
       return res.status(400).json(validationErrorResponse(parsed.error));
     }
-    const {
-      assetClasses,
-      customerProfile,
-      goals,
-      monthlySIP,
-      stretchSIPPercent,
-      annualStepUpPercent,
-    } = parsed.data;
+    const { assetClasses, customerProfile, goals, monthlySIP, stretchSIPPercent, annualStepUpPercent, assetClassesByProfile } =
+      parsed.data;
 
     const sipInput: SIPInput = {
       monthlySIP,
@@ -65,6 +59,7 @@ router.post("/plan/method1", (req: Request, res: Response) => {
       customerProfile,
       goals: goals.goals,
       sipInput,
+      assetClassesByProfile,
     });
 
     const result = planner.planMethod1();
@@ -89,16 +84,14 @@ router.get("/plan/method2", (req: Request, res: Response) => {
     description: "Monte Carlo simulation-based planning using volatilityPct",
     endpoint: "/api/plan/method2",
     requiredFields: [
-      "assetClasses (with volatilityPct for all asset classes)",
-      "customerProfile",
+      "assets",
+      "customer_profile",
       "goals",
       "monthlySIP",
-      "stretchSIPPercent (optional)",
-      "annualStepUpPercent (optional)",
       "monteCarloPaths (optional, default 1000)",
     ],
-    example: "See example-request.json file in the project root",
-    note: "This endpoint requires a POST request with JSON body. Use a tool like curl, Postman, or fetch API. Method 2 requires volatilityPct in asset class data.",
+    example: "See example-request.json",
+    note: "Requires assets and customer_profile. Method 2 uses volatility from asset data.",
   });
 });
 
@@ -108,7 +101,7 @@ router.get("/plan/method2", (req: Request, res: Response) => {
  */
 router.post("/plan/method2", (req: Request, res: Response) => {
   try {
-    const parsed = PlanningRequestSchema.safeParse(req.body);
+    const parsed = normalizePlanningRequest(req.body);
     if (!parsed.success) {
       return res.status(400).json(validationErrorResponse(parsed.error));
     }
@@ -120,6 +113,7 @@ router.post("/plan/method2", (req: Request, res: Response) => {
       stretchSIPPercent,
       annualStepUpPercent,
       monteCarloPaths,
+      assetClassesByProfile,
     } = parsed.data;
 
     const sipInput: SIPInput = {
@@ -133,6 +127,7 @@ router.post("/plan/method2", (req: Request, res: Response) => {
       customerProfile,
       goals: goals.goals,
       sipInput,
+      assetClassesByProfile,
     });
 
     const result = planner.planMethod2(monteCarloPaths ?? 1000);
@@ -157,16 +152,14 @@ router.get("/plan/method3", (req: Request, res: Response) => {
     description: "Iterative corpus rebalancing: Calculate SIP with corpus=0, rebalance corpus to match SIP allocation, iterate until convergence",
     endpoint: "/api/plan/method3",
     requiredFields: [
-      "assetClasses (with volatilityPct for all asset classes)",
-      "customerProfile",
+      "assets",
+      "customer_profile",
       "goals",
       "monthlySIP",
-      "stretchSIPPercent (optional)",
-      "annualStepUpPercent (optional)",
-      "monteCarloPaths (optional, default 1000)",
+      "monteCarloPaths (optional)",
       "maxIterations (optional, default 20)",
     ],
-    note: "For goals < 3 years: Allocates corpus but skips SIP calculations (SIP = 0). For goals >= 3 years: Iterates until SIP amounts converge (change < ₹1000).",
+    note: "Requires assets and customer_profile. For goals < 3 years: allocates corpus only. For goals >= 3 years: iterates until SIP converges.",
   });
 });
 
@@ -176,7 +169,7 @@ router.get("/plan/method3", (req: Request, res: Response) => {
  */
 router.post("/plan/method3", (req: Request, res: Response) => {
   try {
-    const parsed = PlanningRequestSchema.safeParse(req.body);
+    const parsed = normalizePlanningRequest(req.body);
     if (!parsed.success) {
       return res.status(400).json(validationErrorResponse(parsed.error));
     }
@@ -189,6 +182,7 @@ router.post("/plan/method3", (req: Request, res: Response) => {
       annualStepUpPercent,
       monteCarloPaths,
       maxIterations,
+      assetClassesByProfile,
     } = parsed.data;
 
     const sipInput: SIPInput = {
@@ -202,6 +196,7 @@ router.post("/plan/method3", (req: Request, res: Response) => {
       customerProfile,
       goals: goals.goals,
       sipInput,
+      assetClassesByProfile,
     });
 
     const result = planner.planMethod3(monteCarloPaths ?? 1000, maxIterations ?? 20);

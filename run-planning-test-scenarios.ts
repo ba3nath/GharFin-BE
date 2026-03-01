@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { GoalPlanner } from "./src/planner/goalPlanner";
-import { planningTestScenarios } from "./src/testScenarios/planningTestScenarios";
+import { planningTestScenarios } from "./src/scenarios/planningTestScenarios";
 import { PlanningResult } from "./src/models/PlanningResult";
 import { PlanningTestScenario } from "./src/models/TestScenario";
 

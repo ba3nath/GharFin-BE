@@ -1,14 +1,23 @@
 import { GoalPlanner } from '../../planner/goalPlanner';
+import { normalizePlanningRequest } from '../../utils/validation';
 import { minimalValidRequest } from '../fixtures/requests';
 import { minimalSIPInput } from '../fixtures/sipInputs';
 
+function getNormalizedRequest() {
+  const parsed = normalizePlanningRequest(minimalValidRequest);
+  if (!parsed.success) throw new Error('Invalid fixture');
+  return parsed.data;
+}
+
 describe('Full Method 1 Workflow', () => {
   it('should complete full planning workflow', () => {
+    const { assetClasses, customerProfile, goals, assetClassesByProfile } = getNormalizedRequest();
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
+      assetClassesByProfile,
     });
 
     const result = planner.planMethod1();
@@ -43,11 +52,13 @@ describe('Full Method 1 Workflow', () => {
   });
 
   it('should verify data consistency - SIP allocation sums correctly', () => {
+    const { assetClasses, customerProfile, goals, assetClassesByProfile } = getNormalizedRequest();
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
+      assetClassesByProfile,
     });
 
     const result = planner.planMethod1();
@@ -62,11 +73,13 @@ describe('Full Method 1 Workflow', () => {
   });
 
   it('should verify corpus allocation sums correctly', () => {
+    const { assetClasses, customerProfile, goals, assetClassesByProfile } = getNormalizedRequest();
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
+      assetClassesByProfile,
     });
 
     const result = planner.planMethod1();
@@ -77,7 +90,7 @@ describe('Full Method 1 Workflow', () => {
       totalAllocated += goalTotal;
     }
 
-    const originalTotal = Object.values(minimalValidRequest.customerProfile.corpus.byAssetClass).reduce(
+    const originalTotal = Object.values(customerProfile.corpus.byAssetClass).reduce(
       (sum, v) => sum + v,
       0
     );
@@ -86,11 +99,13 @@ describe('Full Method 1 Workflow', () => {
   });
 
   it('should verify rounding applied throughout', () => {
+    const { assetClasses, customerProfile, goals, assetClassesByProfile } = getNormalizedRequest();
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
+      assetClassesByProfile,
     });
 
     const result = planner.planMethod1();
@@ -117,11 +132,13 @@ describe('Full Method 1 Workflow', () => {
 
 describe('Full Method 2 Workflow', () => {
   it('should complete full planning workflow', () => {
+    const { assetClasses, customerProfile, goals, assetClassesByProfile } = getNormalizedRequest();
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
+      assetClassesByProfile,
     });
 
     const result = planner.planMethod2(100); // Use fewer paths for faster test
@@ -145,11 +162,13 @@ describe('Full Method 2 Workflow', () => {
   });
 
   it('should verify Monte Carlo results', () => {
+    const { assetClasses, customerProfile, goals, assetClassesByProfile } = getNormalizedRequest();
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
+      assetClassesByProfile,
     });
 
     const result = planner.planMethod2(100);
@@ -163,11 +182,13 @@ describe('Full Method 2 Workflow', () => {
   });
 
   it('should verify data consistency', () => {
+    const { assetClasses, customerProfile, goals, assetClassesByProfile } = getNormalizedRequest();
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
+      assetClassesByProfile,
     });
 
     const result = planner.planMethod2(100);
@@ -185,11 +206,13 @@ describe('Full Method 2 Workflow', () => {
 
 describe('Method Comparison', () => {
   it('should produce valid outputs from both methods', () => {
+    const { assetClasses, customerProfile, goals, assetClassesByProfile } = getNormalizedRequest();
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
+      assetClassesByProfile,
     });
 
     const method1Result = planner.planMethod1();
@@ -200,7 +223,7 @@ describe('Method Comparison', () => {
     expect(method2Result.method).toBe('method2');
 
     // Both should have feasibility tables with at least one row per goal (basic tier always present)
-    const goalCount = minimalValidRequest.goals.goals.length;
+    const goalCount = goals.goals.length;
     expect(method1Result.goalFeasibilityTable.rows.length).toBeGreaterThanOrEqual(goalCount);
     expect(method2Result.goalFeasibilityTable.rows.length).toBeGreaterThanOrEqual(goalCount);
     // Row count can differ: Method 1 may only include basic tier when ambitious confidence < 90%; Method 2 may include both tiers
@@ -213,11 +236,13 @@ describe('Method Comparison', () => {
   });
 
   it('should verify consistency in goal status', () => {
+    const { assetClasses, customerProfile, goals, assetClassesByProfile } = getNormalizedRequest();
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
+      assetClassesByProfile,
     });
 
     const method1Result = planner.planMethod1();

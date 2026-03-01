@@ -1,0 +1,105 @@
+import type { AssetsConfig } from "../../models/AssetsConfig";
+
+/** Minimal assets config for tests: one equity, one debt, one gold category with bucket set. */
+export const minimalAssetsConfig: AssetsConfig = {
+  benchmark: { name: "Nifty 50", beta_reference: 1.0 },
+  mutual_fund_categories: [
+    {
+      category: "Large Cap Fund",
+      expected_return_cagr_range: { min: 0.13, max: 0.15 },
+      beta_range: { min: 0.95, max: 1.05 },
+      volatility_range: { min: 0.17, max: 0.21 },
+      max_positive_year: 0.8,
+      max_negative_year: -0.48,
+      probability_negative_year: 0.23,
+      bucket: "equity",
+    },
+    {
+      category: "Short Duration Debt Fund",
+      expected_return_cagr_range: { min: 0.05, max: 0.07 },
+      beta_range: { min: -0.05, max: 0.05 },
+      volatility_range: { min: 0.01, max: 0.03 },
+      max_positive_year: 0.12,
+      max_negative_year: -0.03,
+      probability_negative_year: 0.05,
+      bucket: "debt",
+    },
+    {
+      category: "Gold ETF / Gold Fund",
+      expected_return_cagr_range: { min: 0.08, max: 0.1 },
+      beta_range: { min: -0.1, max: 0.1 },
+      volatility_range: { min: 0.15, max: 0.2 },
+      max_positive_year: 0.45,
+      max_negative_year: -0.28,
+      probability_negative_year: 0.2,
+      bucket: "gold",
+    },
+  ],
+};
+
+/** Full assets config (subset of production categories) with buckets for corpus derivation. */
+export const fullAssetsConfig: AssetsConfig = {
+  benchmark: { name: "Nifty 50", beta_reference: 1.0 },
+  mutual_fund_categories: [
+    {
+      category: "Nifty 50 Index Fund / ETF",
+      expected_return_cagr_range: { min: 0.12, max: 0.14 },
+      beta_range: { min: 0.98, max: 1.02 },
+      volatility_range: { min: 0.18, max: 0.22 },
+      max_positive_year: 0.75,
+      max_negative_year: -0.5,
+      probability_negative_year: 0.25,
+      bucket: "equity",
+    },
+    {
+      category: "Large Cap Fund",
+      expected_return_cagr_range: { min: 0.13, max: 0.15 },
+      beta_range: { min: 0.95, max: 1.05 },
+      volatility_range: { min: 0.17, max: 0.21 },
+      max_positive_year: 0.8,
+      max_negative_year: -0.48,
+      probability_negative_year: 0.23,
+      bucket: "equity",
+    },
+    {
+      category: "Mid Cap Fund",
+      expected_return_cagr_range: { min: 0.16, max: 0.19 },
+      beta_range: { min: 1.15, max: 1.3 },
+      volatility_range: { min: 0.22, max: 0.3 },
+      max_positive_year: 1.2,
+      max_negative_year: -0.65,
+      probability_negative_year: 0.32,
+      bucket: "equity",
+    },
+    {
+      category: "Gold ETF / Gold Fund",
+      expected_return_cagr_range: { min: 0.08, max: 0.1 },
+      beta_range: { min: -0.1, max: 0.1 },
+      volatility_range: { min: 0.15, max: 0.2 },
+      max_positive_year: 0.45,
+      max_negative_year: -0.28,
+      probability_negative_year: 0.2,
+      bucket: "gold",
+    },
+    {
+      category: "Short Duration Debt Fund",
+      expected_return_cagr_range: { min: 0.05, max: 0.07 },
+      beta_range: { min: -0.05, max: 0.05 },
+      volatility_range: { min: 0.01, max: 0.03 },
+      max_positive_year: 0.12,
+      max_negative_year: -0.03,
+      probability_negative_year: 0.05,
+      bucket: "debt",
+    },
+    {
+      category: "Corporate Bond Fund",
+      expected_return_cagr_range: { min: 0.06, max: 0.08 },
+      beta_range: { min: -0.05, max: 0.05 },
+      volatility_range: { min: 0.03, max: 0.06 },
+      max_positive_year: 0.18,
+      max_negative_year: -0.08,
+      probability_negative_year: 0.08,
+      bucket: "debt",
+    },
+  ],
+};

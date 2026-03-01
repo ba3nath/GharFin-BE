@@ -1,3 +1,5 @@
+import type { ProfileType } from "./AssetsConfig";
+
 /**
  * Goal data structures
  */
@@ -12,6 +14,12 @@ export interface Goal {
   goalName: string;
   horizonYears: number;
   amountVariancePct: number;
+  /**
+   * Return/volatility assumption for this goal: conservative (lower return, higher vol),
+   * realistic (mid), aggressive (higher return, lower vol). Default conservative.
+   * Affects which assets are applicable and required corpus/SIP when using assets config.
+   */
+  profile_type?: ProfileType;
   tiers: {
     basic: GoalTier;
     ambitious: GoalTier;

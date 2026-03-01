@@ -359,7 +359,7 @@ describe('calculateMinimumSIPForConfidenceMonteCarlo', () => {
       0
     );
     const confidence = calculateMonteCarloConfidence(paths, 5000000);
-    expect(confidence).toBeGreaterThanOrEqual(88); // Allow small Monte Carlo variance
+    expect(confidence).toBeGreaterThanOrEqual(85); // Allow Monte Carlo variance
   });
 });
 

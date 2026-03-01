@@ -1,4 +1,5 @@
 import { GoalPlanner } from '../../planner/goalPlanner';
+import { normalizePlanningRequest } from '../../utils/validation';
 import { minimalValidRequest } from '../fixtures/requests';
 import { fullAssetClasses } from '../fixtures/assetClasses';
 import { minimalCustomerProfile, zeroCorpusProfile } from '../fixtures/customerProfiles';
@@ -7,10 +8,13 @@ import { minimalSIPInput, zeroSIP } from '../fixtures/sipInputs';
 
 describe('GoalPlanner - planMethod1', () => {
   it('should plan with minimal request', () => {
+    const parsed = normalizePlanningRequest(minimalValidRequest);
+    if (!parsed.success) throw new Error('Fixture invalid');
+    const { assetClasses, customerProfile, goals } = parsed.data;
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
     });
 
@@ -138,10 +142,13 @@ describe('GoalPlanner - planMethod1', () => {
 
 describe('GoalPlanner - planMethod2', () => {
   it('should plan with minimal request (requires volatilityPct)', () => {
+    const parsed = normalizePlanningRequest(minimalValidRequest);
+    if (!parsed.success) throw new Error('Fixture invalid');
+    const { assetClasses, customerProfile, goals } = parsed.data;
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
     });
 
@@ -233,10 +240,13 @@ describe('GoalPlanner - planMethod2', () => {
 
 describe('GoalPlanner - sequential method calls (goalStates reset)', () => {
   it('should produce valid results when calling planMethod1 then planMethod2 on same instance', () => {
+    const parsed = normalizePlanningRequest(minimalValidRequest);
+    if (!parsed.success) throw new Error('Fixture invalid');
+    const { assetClasses, customerProfile, goals } = parsed.data;
     const planner = new GoalPlanner({
-      assetClasses: minimalValidRequest.assetClasses,
-      customerProfile: minimalValidRequest.customerProfile,
-      goals: minimalValidRequest.goals.goals,
+      assetClasses,
+      customerProfile,
+      goals: goals.goals,
       sipInput: minimalSIPInput,
     });
 

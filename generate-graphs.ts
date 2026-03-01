@@ -1,22 +1,25 @@
 import * as fs from "fs";
 import * as path from "path";
 import { GoalPlanner, SIPInput } from "./src/planner/goalPlanner";
-import { AssetClasses } from "./src/models/AssetClass";
-import { CustomerProfile } from "./src/models/CustomerProfile";
-import { Goals } from "./src/models/Goal";
+import { normalizePlanningRequest } from "./src/utils/validation";
+
 import { generateAllMethodGraphs } from "./generate-graphs-helper";
 
 const inputPath = path.resolve(process.argv[2] ?? "example-request.json");
-const inputData = JSON.parse(fs.readFileSync(inputPath, "utf-8"));
+const inputData: unknown = JSON.parse(fs.readFileSync(inputPath, "utf-8"));
 console.log(`Using input: ${inputPath}\n`);
 
-const assetClasses: AssetClasses = inputData.assetClasses;
-const customerProfile: CustomerProfile = inputData.customerProfile;
-const goals: Goals = inputData.goals;
+const parsed = normalizePlanningRequest(inputData);
+if (!parsed.success) {
+  console.error("Validation failed:", JSON.stringify(parsed.error.issues, null, 2));
+  process.exit(1);
+}
+
+const { assetClasses, customerProfile, goals, monthlySIP, stretchSIPPercent, annualStepUpPercent, assetClassesByProfile } = parsed.data;
 const sipInput: SIPInput = {
-  monthlySIP: inputData.monthlySIP,
-  stretchSIPPercent: inputData.stretchSIPPercent || 0,
-  annualStepUpPercent: inputData.annualStepUpPercent || 0,
+  monthlySIP,
+  stretchSIPPercent: stretchSIPPercent ?? 0,
+  annualStepUpPercent: annualStepUpPercent ?? 0,
 };
 
 const planner = new GoalPlanner({
@@ -24,6 +27,7 @@ const planner = new GoalPlanner({
   customerProfile,
   goals: goals.goals,
   sipInput,
+  assetClassesByProfile,
 });
 
 generateAllMethodGraphs(planner, goals.goals, customerProfile, assetClasses, sipInput, {

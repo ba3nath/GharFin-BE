@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { classifyScenarioBucket, BucketKey, ScenarioRunResultLike } from "./src/testScenarios/planningBucketClassifier";
+import { classifyScenarioBucket, BucketKey, ScenarioRunResultLike } from "./src/scenarios/planningBucketClassifier";
 
 interface BucketMeta {
   label: string; // human label (matches user numbering)

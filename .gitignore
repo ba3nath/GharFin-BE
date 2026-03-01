@@ -57,3 +57,13 @@ coverage/
 # Generated planning output (from run-planning.ts)
 method*-output.json
 output-method*.json
+test-scenario-method*-output.json
+
+# Generated graphs (from generate-graphs.ts / generate-test-scenario-graphs.ts)
+graphs/
+
+# Generated docs (from run-planning-test-scenarios.ts, run-planning-bucket-summary.ts)
+docs/planning-test-scenarios-output.json
+docs/planning-bucket-summary.json
+docs/planning-bucket-summary.md
+docs/planning-test-report.md

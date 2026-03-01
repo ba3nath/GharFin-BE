@@ -128,4 +128,3 @@ export function classifyScenarioBucket(run: ScenarioRunResultLike): BucketClassi
     debug: { corpusProfile, sipProfile, sipIsZero, m1_all_basic_met, m2_all_basic_met, m3_all_basic_met },
   };
 }
-

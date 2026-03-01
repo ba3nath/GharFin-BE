@@ -1,15 +1,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import { GoalPlanner, SIPInput } from "./src/planner/goalPlanner";
-import { AssetClasses } from "./src/models/AssetClass";
-import { CustomerProfile } from "./src/models/CustomerProfile";
-import { Goals } from "./src/models/Goal";
+import { normalizePlanningRequest } from "./src/utils/validation";
 
 /**
  * Run planning for all three methods and write results to method1-output.json,
  * method2-output.json, and method3-output.json (generated in project root).
  * Usage: npx ts-node run-planning.ts [input-file]
- * Default input: example-request.json
+ * Default input: example-request.json (must have assets and customer_profile).
  */
 const inputPath = process.argv[2] ?? "example-request.json";
 
@@ -23,34 +21,19 @@ try {
   process.exit(1);
 }
 
-if (
-  !inputData ||
-  typeof inputData !== "object" ||
-  !("assetClasses" in inputData) ||
-  !("customerProfile" in inputData) ||
-  !("goals" in inputData) ||
-  typeof (inputData as { monthlySIP?: unknown }).monthlySIP !== "number"
-) {
-  console.error("Input file must contain assetClasses, customerProfile, goals, and monthlySIP.");
+const parsed = normalizePlanningRequest(inputData);
+if (!parsed.success) {
+  console.error("Validation failed:", JSON.stringify(parsed.error.issues, null, 2));
   process.exit(1);
 }
 
-const data = inputData as {
-  assetClasses: AssetClasses;
-  customerProfile: CustomerProfile;
-  goals: Goals;
-  monthlySIP: number;
-  stretchSIPPercent?: number;
-  annualStepUpPercent?: number;
-};
+const { assetClasses, customerProfile, goals, monthlySIP, stretchSIPPercent, annualStepUpPercent, assetClassesByProfile } =
+  parsed.data;
 
-const assetClasses: AssetClasses = data.assetClasses;
-const customerProfile: CustomerProfile = data.customerProfile;
-const goals: Goals = data.goals;
 const sipInput: SIPInput = {
-  monthlySIP: data.monthlySIP,
-  stretchSIPPercent: data.stretchSIPPercent ?? 0,
-  annualStepUpPercent: data.annualStepUpPercent ?? 0,
+  monthlySIP,
+  stretchSIPPercent: stretchSIPPercent ?? 0,
+  annualStepUpPercent: annualStepUpPercent ?? 0,
 };
 
 const planner = new GoalPlanner({
@@ -58,6 +41,7 @@ const planner = new GoalPlanner({
   customerProfile,
   goals: goals.goals,
   sipInput,
+  assetClassesByProfile,
 });
 
 const skipMethod1 = process.env.SKIP_METHOD1 === "true" || process.env.SKIP_METHOD1 === "1";

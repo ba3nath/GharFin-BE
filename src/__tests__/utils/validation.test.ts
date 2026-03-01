@@ -2,12 +2,17 @@ import {
   AssetClassDataSchema,
   CustomerProfileSchema,
   GoalSchema,
+  PlanningRequestSchema,
+  normalizePlanningRequest,
   SIPInputSchema,
 } from '../../utils/validation';
 import { minimalAssetClass } from '../fixtures/assetClasses';
 import { minimalCustomerProfile } from '../fixtures/customerProfiles';
+import { moderateCustomerProfileInput } from '../fixtures/customerProfileInputs';
 import { singleGoal } from '../fixtures/goals';
 import { minimalSIPInput } from '../fixtures/sipInputs';
+import { multipleGoals } from '../fixtures/goals';
+import { minimalAssetsConfig } from '../fixtures/assetsConfig';
 
 describe('AssetClassDataSchema', () => {
   it('should validate valid asset class data', () => {
@@ -177,6 +182,94 @@ describe('SIPInputSchema', () => {
   it('should reject negative annualStepUpPercent', () => {
     const invalid = { ...minimalSIPInput, annualStepUpPercent: -10 };
     const result = SIPInputSchema.safeParse(invalid);
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('PlanningRequestSchema', () => {
+  const validRequest = {
+    assets: minimalAssetsConfig,
+    customer_profile: moderateCustomerProfileInput,
+    goals: { goals: multipleGoals },
+    monthlySIP: 5000,
+  };
+
+  it('validates request with assets and customer_profile', () => {
+    const result = PlanningRequestSchema.safeParse(validRequest);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects when assets is missing', () => {
+    const result = PlanningRequestSchema.safeParse({
+      ...validRequest,
+      assets: undefined,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects when customer_profile is missing', () => {
+    const result = PlanningRequestSchema.safeParse({
+      ...validRequest,
+      customer_profile: undefined,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects when customer_profile existing_asset_allocation does not sum to 100', () => {
+    const result = PlanningRequestSchema.safeParse({
+      ...validRequest,
+      customer_profile: {
+        ...moderateCustomerProfileInput,
+        stability: {
+          ...moderateCustomerProfileInput.stability,
+          existing_asset_allocation: { equity: 40, debt: 30, gold: 10, real_estate: 5 },
+        },
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('normalizePlanningRequest', () => {
+  const validRequest = {
+    assets: minimalAssetsConfig,
+    customer_profile: moderateCustomerProfileInput,
+    goals: { goals: multipleGoals },
+    monthlySIP: 5000,
+  };
+
+  it('accepts request and returns normalized assetClasses and customerProfile', () => {
+    const result = normalizePlanningRequest(validRequest);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.assetClasses).toBeDefined();
+      expect(Object.keys(result.data.assetClasses)).toEqual([
+        'Large Cap Fund',
+        'Short Duration Debt Fund',
+        'Gold ETF / Gold Fund',
+      ]);
+      expect(result.data.bucketToCategories.equity).toContain('Large Cap Fund');
+      expect(result.data.benchmark).toEqual({ name: 'Nifty 50', beta_reference: 1.0 });
+      expect(result.data.customerProfile.totalNetWorth).toBe(
+        moderateCustomerProfileInput.financials.current_networth
+      );
+      expect(result.data.customerProfile.corpus.allowedAssetClasses.length).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('rejects invalid request', () => {
+    const result = normalizePlanningRequest({ ...validRequest, monthlySIP: -1 });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects when customer_profile has invalid financials', () => {
+    const result = normalizePlanningRequest({
+      ...validRequest,
+      customer_profile: {
+        ...moderateCustomerProfileInput,
+        financials: { ...moderateCustomerProfileInput.financials, current_networth: -1 },
+      },
+    });
     expect(result.success).toBe(false);
   });
 });

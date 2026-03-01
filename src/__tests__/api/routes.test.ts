@@ -1,6 +1,8 @@
 import request from 'supertest';
 import app from '../../api/server';
 import { minimalValidRequest } from '../fixtures/requests';
+import { assetsConfigToAssetClasses } from '../../models/AssetsConfig';
+import { minimalAssetsConfig } from '../fixtures/assetsConfig';
 
 describe('GET /api', () => {
   it('should return API information', async () => {
@@ -72,8 +74,8 @@ describe('POST /api/plan/method1', () => {
     const response = await request(app)
       .post('/api/plan/method1')
       .send({
-        assetClasses: minimalValidRequest.assetClasses,
-        // Missing other required fields
+        assets: minimalValidRequest.assets,
+        // Missing customer_profile, goals, monthlySIP
       });
     
     expect(response.status).toBe(400);
@@ -93,6 +95,7 @@ describe('POST /api/plan/method1', () => {
     expect(response.status).toBe(200);
     expect(response.body.method).toBe('method1');
   });
+
 });
 
 describe('POST /api/plan/method2', () => {
@@ -133,41 +136,20 @@ describe('POST /api/plan/method2', () => {
     expect(response.status).toBe(200);
   }, 30000); // Method 2 with Monte Carlo can take time
 
-  it('should return error if volatilityPct missing', async () => {
-    const requestWithoutVolatility = {
-      ...minimalValidRequest,
-      assetClasses: {
-        largeCap: {
-          "10Y": {
-            avgReturnPct: 11.0,
-            probNegativeYearPct: 18,
-            expectedShortfallPct: -15,
-            maxDrawdownPct: -28,
-            // volatilityPct missing
-          },
-        },
-      },
-    };
-
-    const response = await request(app)
-      .post('/api/plan/method2')
-      .send(requestWithoutVolatility);
-    
-    expect(response.status).toBe(500);
-    expect(response.body.error).toBeDefined();
-  });
 });
 
 describe('POST /api/validate', () => {
   it('should validate envelope bounds', async () => {
+    const assetClasses = assetsConfigToAssetClasses(minimalAssetsConfig, 'realistic');
+    const largeCapData = assetClasses['Large Cap Fund']?.['10Y'];
     const validateRequest = {
       initialCorpus: 1000000,
       monthlySIP: 50000,
       allocations: [
-        { assetClass: 'largeCap', percentage: 100 },
+        { assetClass: 'Large Cap Fund', percentage: 100 },
       ],
       assetClassDataMap: {
-        largeCap: minimalValidRequest.assetClasses.largeCap['10Y'],
+        'Large Cap Fund': largeCapData,
       },
       horizonYears: 10,
       envelopeBounds: {
@@ -204,19 +186,17 @@ describe('Error Handling', () => {
     expect(response.body.error).toBeDefined();
   });
 
-  it('should return 400 or 500 for internal errors', async () => {
-    // Send malformed data - validation catches it first (400)
+  it('should return 400 for invalid payload', async () => {
     const response = await request(app)
       .post('/api/plan/method1')
       .send({
-        assetClasses: null,
-        customerProfile: null,
+        assets: null,
+        customer_profile: null,
         goals: null,
         monthlySIP: 'invalid',
       });
     
-    // Validation catches invalid data first (400), or could be 500 if it passes validation
-    expect([400, 500]).toContain(response.status);
+    expect(response.status).toBe(400);
     expect(response.body.error).toBeDefined();
   });
 });
