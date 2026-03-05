@@ -1,4 +1,4 @@
-import { getBasicTiersSorted, getAmbitiousTiersSorted, getAllTiersSorted, getTierPriority, getGoalTarget, sortGoalsByPriority } from '../../models/Goal';
+import { Goal, getBasicTiersSorted, getAmbitiousTiersSorted, getAllTiersSorted, getTierPriority, getGoalTarget, sortGoalsByPriority } from '../../models/Goal';
 import { multipleGoals, singleGoal } from '../fixtures/goals';
 
 describe('getTierPriority', () => {
@@ -83,20 +83,20 @@ describe('getAmbitiousTiersSorted', () => {
 
 describe('getAllTiersSorted', () => {
   it('should flatten and sort all tiers by priority', () => {
-    const goal1 = {
+    const goal1: Goal = {
       ...singleGoal,
       goalId: 'goal1',
       tiers: {
-        basic: { targetAmount: 1000, priority: 3 },
-        ambitious: { targetAmount: 2000, priority: 1 }
+        basic: { targetAmount: [1000, 2000], priority: 3 },
+        ambitious: { targetAmount: [2000, 3000], priority: 1 }
       }
     };
-    const goal2 = {
+    const goal2: Goal = {
       ...singleGoal,
       goalId: 'goal2',
       tiers: {
-        basic: { targetAmount: 1000, priority: 2 },
-        ambitious: { targetAmount: 2000, priority: 4 }
+        basic: { targetAmount: [1000, 2000], priority: 2 },
+        ambitious: { targetAmount: [2000, 3000], priority: 4 }
       }
     };
     const allTiers = getAllTiersSorted([goal1, goal2]);
@@ -137,12 +137,12 @@ describe('sortGoalsByPriority (deprecated)', () => {
 });
 
 describe('getGoalTarget', () => {
-  it('should get basic tier target', () => {
+  it('should get basic tier target (max of range)', () => {
     const result = getGoalTarget(singleGoal, 'basic');
     expect(result).toBe(5000000);
   });
 
-  it('should get ambitious tier target', () => {
+  it('should get ambitious tier target (max of range)', () => {
     const result = getGoalTarget(singleGoal, 'ambitious');
     expect(result).toBe(8000000);
   });

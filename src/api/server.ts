@@ -29,8 +29,8 @@ app.get("/", (req, res) => {
     message: "Goal-based SIP Optimization API",
     version: "1.0.0",
     endpoints: {
-      method1: "POST /api/plan/method1",
-      method2: "POST /api/plan/method2",
+      gharfin: "POST /api/plan/gharfin",
+      method2: "POST /api/plan/method2 (deprecated, use gharfin)",
       validate: "POST /api/validate",
       health: "GET /api/health",
     },

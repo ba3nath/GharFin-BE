@@ -14,39 +14,46 @@ function validationErrorResponse(error: { issues: unknown }) {
 }
 
 /**
- * GET /api/plan/method1
- * Get information about Method 1 endpoint
+ * GET /api/plan/gharfin
+ * Get information about GharFin planning endpoint
  */
-router.get("/plan/method1", (req: Request, res: Response) => {
+router.get("/plan/gharfin", (req: Request, res: Response) => {
   res.json({
     method: "POST",
-    description: "Calculate SIP allocation with current corpus allocation",
-    endpoint: "/api/plan/method1",
+    description: "GharFin method: Monte Carlo simulation-based planning (95% confidence on goal max, volatilityPct required)",
+    endpoint: "/api/plan/gharfin",
     requiredFields: [
-      "assets (benchmark + mutual_fund_categories)",
+      "assets",
       "customer_profile",
       "goals",
       "monthlySIP",
-      "stretchSIPPercent (optional)",
-      "annualStepUpPercent (optional)",
+      "monteCarloPaths (optional, default 1000)",
     ],
-    example: "See example-request.json in the project root",
-    note: "POST with JSON body. Requires assets and customer_profile.",
+    example: "See example-request.json",
+    note: "Requires assets and customer_profile. Uses volatility from asset data. Goal duration is fully considered.",
   });
 });
 
 /**
- * POST /api/plan/method1
- * Method 1: Calculate SIP allocation with current corpus allocation
+ * POST /api/plan/gharfin
+ * GharFin method: Monte Carlo with Phase 1 (zero corpus, unlimited SIP) then Phase 2 (actual corpus + SIP)
  */
-router.post("/plan/method1", (req: Request, res: Response) => {
+router.post("/plan/gharfin", (req: Request, res: Response) => {
   try {
     const parsed = normalizePlanningRequest(req.body);
     if (!parsed.success) {
       return res.status(400).json(validationErrorResponse(parsed.error));
     }
-    const { assetClasses, customerProfile, goals, monthlySIP, stretchSIPPercent, annualStepUpPercent, assetClassesByProfile } =
-      parsed.data;
+    const {
+      assetClasses,
+      customerProfile,
+      goals,
+      monthlySIP,
+      stretchSIPPercent,
+      annualStepUpPercent,
+      monteCarloPaths,
+      assetClassesByProfile,
+    } = parsed.data;
 
     const sipInput: SIPInput = {
       monthlySIP,
@@ -62,10 +69,10 @@ router.post("/plan/method1", (req: Request, res: Response) => {
       assetClassesByProfile,
     });
 
-    const result = planner.planMethod1();
+    const result = planner.planMethod2(monteCarloPaths ?? 1000);
     res.json(result);
   } catch (error: unknown) {
-    console.error("Error in Method 1 planning:", error);
+    console.error("Error in GharFin planning:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({
       error: "Internal server error",
@@ -74,31 +81,17 @@ router.post("/plan/method1", (req: Request, res: Response) => {
   }
 });
 
-/**
- * GET /api/plan/method2
- * Get information about Method 2 endpoint
- */
+/** @deprecated Use POST /api/plan/gharfin. Kept for backward compatibility. */
 router.get("/plan/method2", (req: Request, res: Response) => {
   res.json({
     method: "POST",
-    description: "Monte Carlo simulation-based planning using volatilityPct",
+    description: "Deprecated: use /api/plan/gharfin. Same as GharFin method.",
     endpoint: "/api/plan/method2",
-    requiredFields: [
-      "assets",
-      "customer_profile",
-      "goals",
-      "monthlySIP",
-      "monteCarloPaths (optional, default 1000)",
-    ],
-    example: "See example-request.json",
-    note: "Requires assets and customer_profile. Method 2 uses volatility from asset data.",
+    redirect: "/api/plan/gharfin",
   });
 });
 
-/**
- * POST /api/plan/method2
- * Method 2: Rebalance corpus to match SIP allocation, then recalculate
- */
+/** @deprecated Use POST /api/plan/gharfin. Kept for backward compatibility. */
 router.post("/plan/method2", (req: Request, res: Response) => {
   try {
     const parsed = normalizePlanningRequest(req.body);
@@ -133,7 +126,7 @@ router.post("/plan/method2", (req: Request, res: Response) => {
     const result = planner.planMethod2(monteCarloPaths ?? 1000);
     res.json(result);
   } catch (error: unknown) {
-    console.error("Error in Method 2 planning:", error);
+    console.error("Error in GharFin planning (method2):", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({
       error: "Internal server error",
@@ -268,8 +261,8 @@ router.get("/", (req: Request, res: Response) => {
     message: "Goal-based SIP Optimization API",
     version: "1.0.0",
     endpoints: {
-      method1: "POST /api/plan/method1 - Calculate SIP allocation with envelope method",
-      method2: "POST /api/plan/method2 - Monte Carlo simulation-based planning",
+      gharfin: "POST /api/plan/gharfin - GharFin method (Monte Carlo, 95% confidence on goal max)",
+      method2: "POST /api/plan/method2 - (deprecated) Use /api/plan/gharfin",
       method3: "POST /api/plan/method3 - Iterative corpus rebalancing to match SIP allocation",
       validate: "POST /api/validate - Validate envelope method with Monte Carlo",
       health: "GET /api/health - Health check",

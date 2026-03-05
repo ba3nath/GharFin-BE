@@ -10,27 +10,21 @@ export interface AssetClassData {
   volatilityPct?: number; // Annual volatility % (required for Method 2, optional for Method 1)
 }
 
-export interface TimeHorizonData {
-  "3Y"?: AssetClassData;
-  "5Y"?: AssetClassData;
-  "10Y"?: AssetClassData;
-}
-
-export type AssetClasses = Record<string, TimeHorizonData>;
+/**
+ * Single asset class data (same CAGR/volatility for all horizons).
+ * No 3Y/5Y/10Y; the given CAGR range is used for all years.
+ */
+export type AssetClasses = Record<string, AssetClassData>;
 
 /**
- * Get asset class data for a specific time horizon
+ * Get asset class data. Same data is used for all horizons (no 3Y/5Y/10Y).
  */
 export function getAssetClassData(
   assetClasses: AssetClasses,
-  assetClassName: string,
-  timeHorizon: "3Y" | "5Y" | "10Y"
+  assetClassName: string
 ): AssetClassData | null {
-  const assetClass = assetClasses[assetClassName];
-  if (!assetClass) {
-    return null;
-  }
-  return assetClass[timeHorizon] || null;
+  const data = assetClasses[assetClassName];
+  return data ?? null;
 }
 
 /**

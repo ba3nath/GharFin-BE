@@ -143,11 +143,7 @@ export function assetsConfigToAssetClasses(
       volatilityPct,
     };
 
-    result[cat.category] = {
-      "3Y": data,
-      "5Y": data,
-      "10Y": data,
-    };
+    result[cat.category] = data;
   }
 
   return result;

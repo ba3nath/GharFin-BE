@@ -23,11 +23,11 @@ export function monthsToYears(months: number): number {
 }
 
 /**
- * Determines the appropriate time horizon key based on goal horizon.
- * Used to select the correct asset class data for the goal's time horizon.
- * 
+ * Returns a horizon label from goal years. Not used for asset data (single CAGR per asset class).
+ * Kept for compatibility and time-based allocation logic that may key by horizon.
+ *
  * @param horizonYears - Goal horizon in years
- * @returns Time horizon key: "3Y" for ≤3 years, "5Y" for ≤5 years, "10Y" for >5 years
+ * @returns "3Y" for ≤3 years, "5Y" for ≤5 years, "10Y" for >5 years
  */
 export function getTimeHorizonKey(horizonYears: number): "3Y" | "5Y" | "10Y" {
   if (horizonYears <= 3) {

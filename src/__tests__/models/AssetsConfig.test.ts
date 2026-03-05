@@ -71,19 +71,17 @@ describe("assetsConfigToAssetClasses", () => {
     ]);
   });
 
-  it("populates 3Y, 5Y, 10Y with same data", () => {
+  it("populates single AssetClassData per category (same CAGR for all horizons)", () => {
     const out = assetsConfigToAssetClasses(minimalAssetsConfig);
     const key = "Large Cap Fund";
-    expect(out[key]["3Y"]).toBeDefined();
-    expect(out[key]["5Y"]).toBeDefined();
-    expect(out[key]["10Y"]).toBeDefined();
-    expect(out[key]["3Y"]).toEqual(out[key]["5Y"]);
-    expect(out[key]["5Y"]).toEqual(out[key]["10Y"]);
+    expect(out[key]).toBeDefined();
+    expect(out[key]).toHaveProperty("avgReturnPct");
+    expect(out[key]).toHaveProperty("volatilityPct");
   });
 
   it("conservative uses lower return and higher volatility (default)", () => {
     const out = assetsConfigToAssetClasses(minimalAssetsConfig, "conservative");
-    const data = out["Large Cap Fund"]["10Y"]!;
+    const data = out["Large Cap Fund"]!;
     expect(data.avgReturnPct).toBeCloseTo(13, 1); // min of range
     expect(data.volatilityPct).toBeCloseTo(21, 1); // max of range
     expect(data.probNegativeYearPct).toBeCloseTo(23, 1);
@@ -92,21 +90,21 @@ describe("assetsConfigToAssetClasses", () => {
 
   it("realistic uses midpoint of return and volatility", () => {
     const out = assetsConfigToAssetClasses(minimalAssetsConfig, "realistic");
-    const data = out["Large Cap Fund"]["10Y"]!;
+    const data = out["Large Cap Fund"]!;
     expect(data.avgReturnPct).toBeCloseTo(14, 1);
     expect(data.volatilityPct).toBeCloseTo(19, 1);
   });
 
   it("aggressive uses higher return and lower volatility", () => {
     const out = assetsConfigToAssetClasses(minimalAssetsConfig, "aggressive");
-    const data = out["Large Cap Fund"]["10Y"]!;
+    const data = out["Large Cap Fund"]!;
     expect(data.avgReturnPct).toBeCloseTo(15, 1); // max of range
     expect(data.volatilityPct).toBeCloseTo(17, 1); // min of range
   });
 
   it("getAssetClassData returns data for converted config", () => {
     const assetClasses = assetsConfigToAssetClasses(minimalAssetsConfig, "realistic");
-    const data = getAssetClassData(assetClasses, "Large Cap Fund", "10Y");
+    const data = getAssetClassData(assetClasses, "Large Cap Fund");
     expect(data).not.toBeNull();
     expect(data!.avgReturnPct).toBeCloseTo(14, 1);
   });
@@ -144,9 +142,9 @@ describe("getBucketToCategories", () => {
 describe("buildAssetClassesByProfile", () => {
   it("returns conservative, realistic, aggressive with different return/vol", () => {
     const byProfile = buildAssetClassesByProfile(minimalAssetsConfig);
-    const cons = byProfile.conservative["Large Cap Fund"]["10Y"]!;
-    const real = byProfile.realistic["Large Cap Fund"]["10Y"]!;
-    const agg = byProfile.aggressive["Large Cap Fund"]["10Y"]!;
+    const cons = byProfile.conservative["Large Cap Fund"]!;
+    const real = byProfile.realistic["Large Cap Fund"]!;
+    const agg = byProfile.aggressive["Large Cap Fund"]!;
     expect(cons.avgReturnPct).toBeLessThan(real.avgReturnPct);
     expect(real.avgReturnPct).toBeLessThan(agg.avgReturnPct);
     expect(cons.volatilityPct ?? 0).toBeGreaterThan(real.volatilityPct ?? 0);

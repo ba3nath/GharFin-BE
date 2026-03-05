@@ -12,7 +12,6 @@ import {
   AssetAllocation,
 } from '../../engine/portfolio';
 import { getAssetClassData } from '../../models/AssetClass';
-import { getTimeHorizonKey } from '../../utils/time';
 import { yearsToMonths } from '../../utils/time';
 import { annualToMonthlyReturn } from '../../utils/math';
 import { calculateAvgPositiveReturn } from '../../models/AssetClass';
@@ -145,13 +144,12 @@ export function createProfileWithCorpus(
  */
 export function buildAssetClassDataMap(
   assetClasses: AssetClasses,
-  assetAllocations: AssetAllocation[],
-  timeHorizon: string
+  assetAllocations: AssetAllocation[]
 ): Record<string, any> {
   const assetClassDataMap: Record<string, any> = {};
   for (const alloc of assetAllocations) {
     if (alloc.assetClass === 'cash') continue;
-    const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon as "3Y" | "5Y" | "10Y");
+    const data = getAssetClassData(assetClasses, alloc.assetClass);
     if (data) {
       assetClassDataMap[alloc.assetClass] = data;
     }

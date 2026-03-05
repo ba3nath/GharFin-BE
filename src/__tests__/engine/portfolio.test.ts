@@ -16,8 +16,8 @@ describe('calculatePortfolioMetrics', () => {
   ];
 
   const assetClassDataMap = {
-    largeCap: fullAssetClasses.largeCap['10Y']!,
-    bond: fullAssetClasses.bond['10Y']!,
+    largeCap: fullAssetClasses.largeCap!,
+    bond: fullAssetClasses.bond!,
   };
 
   it('should calculate weighted return', () => {
@@ -148,25 +148,25 @@ describe('optimizeSharpeRatio', () => {
   const allowedAssetClasses = ['largeCap', 'bond', 'midCap'];
 
   it('should return allocation with sum = 100%', () => {
-    const allocation = optimizeSharpeRatio(allowedAssetClasses, fullAssetClasses, '10Y');
+    const allocation = optimizeSharpeRatio(allowedAssetClasses, fullAssetClasses);
     const total = allocation.reduce((sum, a) => sum + a.percentage, 0);
     expect(total).toBe(100);
   });
 
   it('should allocate more to higher Sharpe ratio assets', () => {
-    const allocation = optimizeSharpeRatio(allowedAssetClasses, fullAssetClasses, '10Y');
+    const allocation = optimizeSharpeRatio(allowedAssetClasses, fullAssetClasses);
     expect(allocation.length).toBeGreaterThan(0);
     expect(allocation.every((a) => a.percentage >= 0)).toBe(true);
   });
 
   it('should handle single allowed asset class', () => {
-    const allocation = optimizeSharpeRatio(['largeCap'], fullAssetClasses, '10Y');
+    const allocation = optimizeSharpeRatio(['largeCap'], fullAssetClasses);
     expect(allocation.length).toBe(1);
     expect(allocation[0].percentage).toBe(100);
   });
 
   it('should skip cash', () => {
-    const allocation = optimizeSharpeRatio(['cash'], fullAssetClasses, '10Y');
+    const allocation = optimizeSharpeRatio(['cash'], fullAssetClasses);
     // Should return empty or handle gracefully
     expect(allocation).toBeDefined();
   });
@@ -235,8 +235,8 @@ describe('calculateWeightedMetrics', () => {
   ];
 
   const assetClassDataMap = {
-    largeCap: fullAssetClasses.largeCap['10Y']!,
-    bond: fullAssetClasses.bond['10Y']!,
+    largeCap: fullAssetClasses.largeCap!,
+    bond: fullAssetClasses.bond!,
   };
 
   it('should calculate weighted return', () => {

@@ -2,10 +2,13 @@ import type { ProfileType } from "./AssetsConfig";
 
 /**
  * Goal data structures
+ * targetAmount is [min, max] range; strict ordering required (max > min).
  */
 
+export type TargetAmountRange = [number, number];
+
 export interface GoalTier {
-  targetAmount: number;
+  targetAmount: TargetAmountRange;
   priority: number;
 }
 
@@ -13,7 +16,6 @@ export interface Goal {
   goalId: string;
   goalName: string;
   horizonYears: number;
-  amountVariancePct: number;
   /**
    * Return/volatility assumption for this goal: conservative (lower return, higher vol),
    * realistic (mid), aggressive (higher return, lower vol). Default conservative.
@@ -38,10 +40,24 @@ export function getTierPriority(goal: Goal, tier: "basic" | "ambitious"): number
 }
 
 /**
- * Get goal target amount for a tier
+ * Get goal target amount for a tier (max of range). Use for SIP/corpus planning.
  */
 export function getGoalTarget(goal: Goal, tier: "basic" | "ambitious"): number {
-  return goal.tiers[tier].targetAmount;
+  return goal.tiers[tier].targetAmount[1];
+}
+
+/**
+ * Get minimum of goal target range for a tier.
+ */
+export function getGoalTargetMin(goal: Goal, tier: "basic" | "ambitious"): number {
+  return goal.tiers[tier].targetAmount[0];
+}
+
+/**
+ * Get maximum of goal target range for a tier.
+ */
+export function getGoalTargetMax(goal: Goal, tier: "basic" | "ambitious"): number {
+  return goal.tiers[tier].targetAmount[1];
 }
 
 /**

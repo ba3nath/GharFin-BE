@@ -26,18 +26,18 @@ const legacyBucketToCategories: Record<AssetBucket, string[]> = {
 
 describe("CustomerProfileInput", () => {
   describe("deriveAllowedAssetClasses", () => {
-    it("returns only asset classes within volatility and drawdown limits (10Y)", () => {
-      // fullAssetClasses 10Y: largeCap vol 15 drawdown 28, bond vol 5 drawdown 0, midCap vol 20 drawdown 38
+    it("returns only asset classes within volatility and drawdown limits", () => {
+      // fullAssetClasses: largeCap vol 20 drawdown 35, bond vol 5 drawdown 0, midCap vol 26 drawdown 45
       const riskTolerance = {
-        max_acceptable_volatility_percent: 18,
-        max_acceptable_drawdown_percent: 30,
+        max_acceptable_volatility_percent: 22,
+        max_acceptable_drawdown_percent: 40,
         negative_year_tolerance_probability: 0.2,
         panic_threshold_drop_percent: 25,
       };
-      const allowed = deriveAllowedAssetClasses(fullAssetClasses, riskTolerance, "10Y");
+      const allowed = deriveAllowedAssetClasses(fullAssetClasses, riskTolerance);
       expect(allowed).toContain("bond");
       expect(allowed).toContain("largeCap");
-      expect(allowed).not.toContain("midCap"); // vol 20 > 18
+      expect(allowed).not.toContain("midCap"); // vol 26 > 22
     });
 
     it("returns at least one (safest) when no asset passes", () => {
@@ -47,7 +47,7 @@ describe("CustomerProfileInput", () => {
         negative_year_tolerance_probability: 0.01,
         panic_threshold_drop_percent: 1,
       };
-      const allowed = deriveAllowedAssetClasses(fullAssetClasses, riskTolerance, "10Y");
+      const allowed = deriveAllowedAssetClasses(fullAssetClasses, riskTolerance);
       expect(allowed.length).toBeGreaterThanOrEqual(1);
       expect(allowed[0]).toBe("bond"); // lowest volatility
     });
@@ -59,7 +59,7 @@ describe("CustomerProfileInput", () => {
         negative_year_tolerance_probability: 0.4,
         panic_threshold_drop_percent: 40,
       };
-      const allowed = deriveAllowedAssetClasses(fullAssetClasses, riskTolerance, "10Y");
+      const allowed = deriveAllowedAssetClasses(fullAssetClasses, riskTolerance);
       expect(allowed).toContain("largeCap");
       expect(allowed).toContain("bond");
       expect(allowed).toContain("midCap");

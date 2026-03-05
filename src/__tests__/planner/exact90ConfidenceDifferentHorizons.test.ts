@@ -8,7 +8,6 @@ import {
   AssetAllocation,
 } from '../../engine/portfolio';
 import { getAssetClassData } from '../../models/AssetClass';
-import { getTimeHorizonKey } from '../../utils/time';
 import { yearsToMonths } from '../../utils/time';
 import { corpusAtTimeWithStepUp, annualToMonthlyReturn } from '../../utils/math';
 
@@ -73,107 +72,18 @@ function createTestScenario(
     goalId,
     goalName,
     horizonYears,
-    amountVariancePct: 0,
     tiers: {
-      basic: { targetAmount: 5000000, priority: 1 },
-      ambitious: { targetAmount: 5000000, priority: 2 },
+      basic: { targetAmount: [4500000, 5000000], priority: 1 },
+      ambitious: { targetAmount: [4999999, 5000000], priority: 2 },
     },
   };
 
-  // Asset classes with data for 3Y, 5Y, and 10Y horizons
+  // Asset classes: single CAGR used for all horizons
   const assetClasses: AssetClasses = {
-    smallCap: {
-      "3Y": {
-        avgReturnPct: 18.0,
-        probNegativeYearPct: 30,
-        expectedShortfallPct: -32,
-        maxDrawdownPct: -55,
-        volatilityPct: 28.0,
-      },
-      "5Y": {
-        avgReturnPct: 17.0,
-        probNegativeYearPct: 28,
-        expectedShortfallPct: -30,
-        maxDrawdownPct: -50,
-        volatilityPct: 27.0,
-      },
-      "10Y": {
-        avgReturnPct: 15.5,
-        probNegativeYearPct: 26,
-        expectedShortfallPct: -28,
-        maxDrawdownPct: -45,
-        volatilityPct: 25.0,
-      },
-    },
-    midCap: {
-      "3Y": {
-        avgReturnPct: 15.0,
-        probNegativeYearPct: 26,
-        expectedShortfallPct: -24,
-        maxDrawdownPct: -45,
-        volatilityPct: 24.0,
-      },
-      "5Y": {
-        avgReturnPct: 14.0,
-        probNegativeYearPct: 24,
-        expectedShortfallPct: -22,
-        maxDrawdownPct: -42,
-        volatilityPct: 23.0,
-      },
-      "10Y": {
-        avgReturnPct: 13.0,
-        probNegativeYearPct: 22,
-        expectedShortfallPct: -20,
-        maxDrawdownPct: -38,
-        volatilityPct: 21.0,
-      },
-    },
-    largeCap: {
-      "3Y": {
-        avgReturnPct: 12.0,
-        probNegativeYearPct: 22,
-        expectedShortfallPct: -18,
-        maxDrawdownPct: -35,
-        volatilityPct: 19.0,
-      },
-      "5Y": {
-        avgReturnPct: 11.5,
-        probNegativeYearPct: 20,
-        expectedShortfallPct: -17,
-        maxDrawdownPct: -32,
-        volatilityPct: 18.0,
-      },
-      "10Y": {
-        avgReturnPct: 11.0,
-        probNegativeYearPct: 18,
-        expectedShortfallPct: -15,
-        maxDrawdownPct: -28,
-        volatilityPct: 17.0,
-      },
-    },
-    bond: {
-      "3Y": {
-        avgReturnPct: 6.5,
-        probNegativeYearPct: 0,
-        expectedShortfallPct: 0,
-        maxDrawdownPct: 0,
-        volatilityPct: 4.5,
-      },
-      "5Y": {
-        avgReturnPct: 6.8,
-        probNegativeYearPct: 0,
-        expectedShortfallPct: 0,
-        maxDrawdownPct: 0,
-        volatilityPct: 5.0,
-      },
-      "10Y": {
-        avgReturnPct: 7.0,
-        probNegativeYearPct: 0,
-        expectedShortfallPct: 0,
-        maxDrawdownPct: 0,
-        volatilityPct: 5.5,
-      },
-    },
+    smallCap: { avgReturnPct: 17.0, probNegativeYearPct: 28, expectedShortfallPct: -30, maxDrawdownPct: -50, volatilityPct: 27.0 },
+    midCap: { avgReturnPct: 14.0, probNegativeYearPct: 24, expectedShortfallPct: -22, maxDrawdownPct: -42, volatilityPct: 23.0 },
+    largeCap: { avgReturnPct: 11.5, probNegativeYearPct: 20, expectedShortfallPct: -17, maxDrawdownPct: -32, volatilityPct: 18.0 },
+    bond: { avgReturnPct: 6.8, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 5.0 },
   };
 
   const allowedAssetClasses = ['smallCap', 'midCap', 'largeCap', 'bond'];
@@ -185,17 +95,16 @@ function createTestScenario(
     0
   );
 
-  const timeHorizon = getTimeHorizonKey(horizonYears);
   const assetClassDataMap: Record<string, any> = {};
   for (const alloc of optimalAllocation) {
     if (alloc.assetClass === 'cash') continue;
-    const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+    const data = getAssetClassData(assetClasses, alloc.assetClass);
     if (data) {
       assetClassDataMap[alloc.assetClass] = data;
     }
   }
 
-  const targetAmount = goal.tiers.basic.targetAmount;
+  const targetAmount = goal.tiers.basic.targetAmount[1];
   const requiredCorpus = calculateRequiredCorpusFor90ConfidenceWithStretchAndStepUp(
     targetAmount,
     goal.horizonYears,
@@ -305,7 +214,7 @@ function runTest(goal: Goal, assetClasses: AssetClasses, customerProfile: Custom
       method1Confidence = testRow.confidencePercent;
       const lowerBound = testRow.projectedCorpus.lower;
       const meanBound = testRow.projectedCorpus.mean;
-      const target = testRow.targetAmount;
+      const target = testRow.targetAmountRange[1];
       
       
       // For 3-year horizons, if confidence is still very low, we need to expand the range aggressively

@@ -14,13 +14,17 @@ export interface Method1Result {
   corpusAllocation: Record<string, Record<string, number>>; // goalId -> assetClass -> amount
 }
 
-export interface Method2Result {
-  method: "method2";
+/** GharFin method: Monte Carlo with zero-corpus Phase 1 then actual corpus + SIP (formerly Method 2). */
+export interface GharFinResult {
+  method: "gharfin";
   goalFeasibilityTable: GoalFeasibilityTable;
   sipAllocation: SIPPlan;
   sipAllocationSchedule: SIPAllocationSchedule;
   corpusAllocation: Record<string, Record<string, number>>; // goalId -> assetClass -> amount
 }
+
+/** @deprecated Use GharFinResult. Kept for backward compatibility. */
+export type Method2Result = GharFinResult;
 
 export interface Method3Result {
   method: "method3";
@@ -30,4 +34,4 @@ export interface Method3Result {
   corpusAllocation: Record<string, Record<string, number>>; // goalId -> assetClass -> amount
 }
 
-export type PlanningResult = Method1Result | Method2Result | Method3Result;
+export type PlanningResult = Method1Result | GharFinResult | Method3Result;

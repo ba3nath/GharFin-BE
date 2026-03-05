@@ -73,23 +73,19 @@ export type CustomerProfileInput = z.infer<typeof CustomerProfileInputSchema>;
 
 // ---------- Bucket → asset class mapping (for corpus derivation) ----------
 
-type TimeHorizon = "3Y" | "5Y" | "10Y";
-
 /**
  * Derive allowed asset classes from customer risk_tolerance and asset class risk metrics.
- * Uses the given time horizon (default 10Y) for volatility and drawdown.
  * If no asset class passes the filter, returns the safest available (lowest volatility, smallest drawdown).
  */
 export function deriveAllowedAssetClasses(
   assetClasses: AssetClasses,
-  riskTolerance: CustomerProfileRiskTolerance,
-  timeHorizon: TimeHorizon = "10Y"
+  riskTolerance: CustomerProfileRiskTolerance
 ): string[] {
   const { max_acceptable_volatility_percent, max_acceptable_drawdown_percent } = riskTolerance;
   const candidates: { name: string; volatility: number; drawdown: number }[] = [];
 
   for (const name of Object.keys(assetClasses)) {
-    const data = getAssetClassData(assetClasses, name, timeHorizon);
+    const data = getAssetClassData(assetClasses, name);
     if (!data) continue;
     const volatility = data.volatilityPct ?? 0;
     const drawdown = Math.abs(data.maxDrawdownPct ?? 0);
@@ -141,16 +137,13 @@ export function mapCustomerProfileInputToInternal(
   options: {
     bucketToCategories: Record<AssetBucket, string[]>;
     asOfDateDefault?: string;
-    timeHorizon?: TimeHorizon;
   }
 ): CustomerProfile {
   const asOfDate = input.asOfDate ?? options.asOfDateDefault ?? "2026-01-01";
-  const timeHorizon = options.timeHorizon ?? "10Y";
 
   const allowedAssetClasses = deriveAllowedAssetClasses(
     assetClasses,
-    input.risk_tolerance,
-    timeHorizon
+    input.risk_tolerance
   );
 
   const netWorth = input.financials.current_networth;

@@ -118,13 +118,11 @@ function renderScenarioMarkdown(run: ScenarioRunResult): string {
     "| Goal | Horizon (years) | Tier | Target | Priority |",
     "|------|-----------------|------|--------|----------|",
     ...goals.goals.flatMap((g) => {
+      const basicRange = g.tiers.basic.targetAmount;
+      const ambitiousRange = g.tiers.ambitious.targetAmount;
       return [
-        `| ${g.goalName} | ${g.horizonYears} | basic | ${formatMoney(
-          g.tiers.basic.targetAmount
-        )} | ${g.tiers.basic.priority} |`,
-        `| ${g.goalName} | ${g.horizonYears} | ambitious | ${formatMoney(
-          g.tiers.ambitious.targetAmount
-        )} | ${g.tiers.ambitious.priority} |`,
+        `| ${g.goalName} | ${g.horizonYears} | basic | ${formatMoney(basicRange[0])} – ${formatMoney(basicRange[1])} | ${g.tiers.basic.priority} |`,
+        `| ${g.goalName} | ${g.horizonYears} | ambitious | ${formatMoney(ambitiousRange[0])} – ${formatMoney(ambitiousRange[1])} | ${g.tiers.ambitious.priority} |`,
       ];
     }),
   ];
@@ -222,7 +220,7 @@ function renderScenarioMarkdown(run: ScenarioRunResult): string {
           row.tier,
           row.status,
           `${row.confidencePercent}`,
-          formatMoney(row.targetAmount),
+          `${formatMoney(row.targetAmountRange[0])} – ${formatMoney(row.targetAmountRange[1])}`,
           formatMoney(row.projectedCorpus.mean),
           formatMoney(meanDeviation),
         ].reduce(

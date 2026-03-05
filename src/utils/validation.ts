@@ -31,23 +31,10 @@ export const AssetClassDataSchema = z.object({
 });
 
 /**
- * Schema for time horizon-specific asset class data.
- * Supports 3Y, 5Y, and 10Y time horizons.
- */
-export const TimeHorizonDataSchema = z.object({
-  "3Y": AssetClassDataSchema.optional(),
-  "5Y": AssetClassDataSchema.optional(),
-  "10Y": AssetClassDataSchema.optional(),
-});
-
-/**
  * Schema for validating the complete asset classes data structure.
- * Maps asset class names to their time horizon-specific data.
+ * Maps asset class names to single AssetClassData (same CAGR for all horizons).
  */
-export const AssetClassesSchema = z.record(
-  z.string(),
-  TimeHorizonDataSchema
-);
+export const AssetClassesSchema = z.record(z.string(), AssetClassDataSchema);
 
 /**
  * Schema for corpus allocation by asset class.
@@ -69,9 +56,14 @@ export const CustomerProfileSchema = z.object({
 
 /**
  * Schema for a single goal tier (basic or ambitious).
+ * targetAmount is [min, max] with strict ordering (max > min).
  */
 export const GoalTierSchema = z.object({
-  targetAmount: z.number().min(0),
+  targetAmount: z
+    .tuple([z.number().min(0), z.number().min(0)])
+    .refine(([min, max]) => max > min, {
+      message: "targetAmount[1] must be greater than targetAmount[0]",
+    }),
   priority: z.number().int().min(1),
 });
 
@@ -90,7 +82,6 @@ export const GoalSchema = z.object({
   goalId: z.string(),
   goalName: z.string(),
   horizonYears: z.number().min(0),
-  amountVariancePct: z.number().min(0).max(100),
   profile_type: ProfileTypeSchema.optional(),
   tiers: z.object({
     basic: GoalTierSchema,

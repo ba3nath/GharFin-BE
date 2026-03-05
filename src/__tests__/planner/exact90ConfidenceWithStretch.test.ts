@@ -11,7 +11,6 @@ import {
   AssetAllocation,
 } from '../../engine/portfolio';
 import { getAssetClassData } from '../../models/AssetClass';
-import { getTimeHorizonKey } from '../../utils/time';
 import { yearsToMonths } from '../../utils/time';
 import { corpusAtTime, annualToMonthlyReturn } from '../../utils/math';
 
@@ -83,51 +82,18 @@ describe('Exact 90% Confidence Test with Stretch SIP', () => {
       goalId: 'test-goal-90-stretch',
       goalName: 'Test Goal 90% Confidence with Stretch',
       horizonYears: 5,
-      amountVariancePct: 0,
       tiers: {
-        basic: { targetAmount: 5000000, priority: 1 }, // ₹50L target
-        ambitious: { targetAmount: 5000000, priority: 2 },
+        basic: { targetAmount: [4500000, 5000000], priority: 1 }, // ₹50L target
+        ambitious: { targetAmount: [4999999, 5000000], priority: 2 },
       },
     };
 
     // Setup: Full asset classes with volatility for Method 2
     const assetClasses: AssetClasses = {
-      smallCap: {
-        "5Y": {
-          avgReturnPct: 17.0,
-          probNegativeYearPct: 28,
-          expectedShortfallPct: -30,
-          maxDrawdownPct: -50,
-          volatilityPct: 27.0,
-        },
-      },
-      midCap: {
-        "5Y": {
-          avgReturnPct: 14.0,
-          probNegativeYearPct: 24,
-          expectedShortfallPct: -22,
-          maxDrawdownPct: -42,
-          volatilityPct: 23.0,
-        },
-      },
-      largeCap: {
-        "5Y": {
-          avgReturnPct: 11.5,
-          probNegativeYearPct: 20,
-          expectedShortfallPct: -17,
-          maxDrawdownPct: -32,
-          volatilityPct: 18.0,
-        },
-      },
-      bond: {
-        "5Y": {
-          avgReturnPct: 6.8,
-          probNegativeYearPct: 0,
-          expectedShortfallPct: 0,
-          maxDrawdownPct: 0,
-          volatilityPct: 5.0,
-        },
-      },
+      smallCap: { avgReturnPct: 17.0, probNegativeYearPct: 28, expectedShortfallPct: -30, maxDrawdownPct: -50, volatilityPct: 27.0 },
+      midCap: { avgReturnPct: 14.0, probNegativeYearPct: 24, expectedShortfallPct: -22, maxDrawdownPct: -42, volatilityPct: 23.0 },
+      largeCap: { avgReturnPct: 11.5, probNegativeYearPct: 20, expectedShortfallPct: -17, maxDrawdownPct: -32, volatilityPct: 18.0 },
+      bond: { avgReturnPct: 6.8, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 5.0 },
     };
 
     // Get optimal allocation (highest risk-reward ratio)
@@ -141,11 +107,10 @@ describe('Exact 90% Confidence Test with Stretch SIP', () => {
     );
 
     // Build asset class data map
-    const timeHorizon = getTimeHorizonKey(goal.horizonYears);
     const assetClassDataMap: Record<string, any> = {};
     for (const alloc of optimalAllocation) {
       if (alloc.assetClass === 'cash') continue;
-      const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+      const data = getAssetClassData(assetClasses, alloc.assetClass);
       if (data) {
         assetClassDataMap[alloc.assetClass] = data;
       }
@@ -156,7 +121,7 @@ describe('Exact 90% Confidence Test with Stretch SIP', () => {
     const stretchSIPPercent = 10;
     
     // Calculate required corpus to meet target at 90% confidence with stretch SIP
-    const targetAmount = goal.tiers.basic.targetAmount;
+    const targetAmount = goal.tiers.basic.targetAmount[1];
     const requiredCorpus = calculateRequiredCorpusFor90ConfidenceWithStretch(
       targetAmount,
       goal.horizonYears,

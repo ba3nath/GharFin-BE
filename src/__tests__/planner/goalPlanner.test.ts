@@ -154,7 +154,7 @@ describe('GoalPlanner - planMethod2', () => {
 
     const result = planner.planMethod2(100); // Use fewer paths for faster test
 
-    expect(result.method).toBe('method2');
+    expect(result.method).toBe('gharfin');
     expect(result.goalFeasibilityTable).toBeDefined();
     expect(result.sipAllocation).toBeDefined();
     expect(result.sipAllocationSchedule).toBeDefined();
@@ -164,13 +164,11 @@ describe('GoalPlanner - planMethod2', () => {
   it('should throw error if volatilityPct missing', () => {
     const assetClassesWithoutVolatility = {
       largeCap: {
-        "10Y": {
-          avgReturnPct: 11.0,
-          probNegativeYearPct: 18,
-          expectedShortfallPct: -15,
-          maxDrawdownPct: -28,
-          // volatilityPct missing
-        },
+        avgReturnPct: 11.0,
+        probNegativeYearPct: 18,
+        expectedShortfallPct: -15,
+        maxDrawdownPct: -28,
+        // volatilityPct missing
       },
     };
 
@@ -258,7 +256,7 @@ describe('GoalPlanner - sequential method calls (goalStates reset)', () => {
     expect(result1.corpusAllocation).toBeDefined();
 
     const result2 = planner.planMethod2(100);
-    expect(result2.method).toBe('method2');
+    expect(result2.method).toBe('gharfin');
     expect(result2.goalFeasibilityTable).toBeDefined();
     expect(result2.sipAllocation).toBeDefined();
     expect(result2.sipAllocationSchedule).toBeDefined();

@@ -21,21 +21,9 @@ import { fullAssetClasses } from '../fixtures/assetClasses';
  */
 describe('Corpus Redistribution Test', () => {
   const fullAssetClassesWithVolatility: AssetClasses = {
-    largeCap: {
-      "3Y": { avgReturnPct: 12.0, probNegativeYearPct: 22, expectedShortfallPct: -18, maxDrawdownPct: -35, volatilityPct: 20.0 },
-      "5Y": { avgReturnPct: 11.5, probNegativeYearPct: 20, expectedShortfallPct: -17, maxDrawdownPct: -32, volatilityPct: 18.0 },
-      "10Y": { avgReturnPct: 11.0, probNegativeYearPct: 18, expectedShortfallPct: -15, maxDrawdownPct: -28, volatilityPct: 15.0 },
-    },
-    midCap: {
-      "3Y": { avgReturnPct: 15.0, probNegativeYearPct: 26, expectedShortfallPct: -24, maxDrawdownPct: -45, volatilityPct: 26.0 },
-      "5Y": { avgReturnPct: 14.0, probNegativeYearPct: 24, expectedShortfallPct: -22, maxDrawdownPct: -42, volatilityPct: 23.0 },
-      "10Y": { avgReturnPct: 13.0, probNegativeYearPct: 22, expectedShortfallPct: -20, maxDrawdownPct: -38, volatilityPct: 20.0 },
-    },
-    bond: {
-      "3Y": { avgReturnPct: 6.5, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 5.0 },
-      "5Y": { avgReturnPct: 6.8, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 5.0 },
-      "10Y": { avgReturnPct: 7.0, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 5.0 },
-    },
+    largeCap: { avgReturnPct: 12.0, probNegativeYearPct: 22, expectedShortfallPct: -18, maxDrawdownPct: -35, volatilityPct: 20.0 },
+    midCap: { avgReturnPct: 15.0, probNegativeYearPct: 26, expectedShortfallPct: -24, maxDrawdownPct: -45, volatilityPct: 26.0 },
+    bond: { avgReturnPct: 6.5, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 5.0 },
   };
 
   const goals: Goal[] = [
@@ -43,20 +31,18 @@ describe('Corpus Redistribution Test', () => {
       goalId: 'retirement',
       goalName: 'Retirement',
       horizonYears: 10,
-      amountVariancePct: 5,
       tiers: {
-        basic: { targetAmount: 8000000, priority: 1 }, // 80L target - very high
-        ambitious: { targetAmount: 12000000, priority: 2 },
+        basic: { targetAmount: [7200000, 8000000], priority: 1 }, // 80L target - very high
+        ambitious: { targetAmount: [10800000, 12000000], priority: 2 },
       },
     },
     {
       goalId: 'child_education',
       goalName: 'Child Education',
       horizonYears: 8,
-      amountVariancePct: 5,
       tiers: {
-        basic: { targetAmount: 5000000, priority: 2 }, // 50L target - very high
-        ambitious: { targetAmount: 7000000, priority: 3 },
+        basic: { targetAmount: [4500000, 5000000], priority: 2 }, // 50L target - very high
+        ambitious: { targetAmount: [6300000, 7000000], priority: 3 },
       },
     },
   ];
@@ -129,12 +115,12 @@ describe('Corpus Redistribution Test', () => {
     console.log('\n=== Method 1 Results ===');
     if (retirementBasic) {
       console.log(`Retirement Basic: ${retirementBasic.status} (${retirementBasic.confidencePercent}%)`);
-      console.log(`  Target: ₹${retirementBasic.targetAmount.toLocaleString()}`);
+      console.log(`  Target: ₹${retirementBasic.targetAmountRange[1].toLocaleString()}`);
       console.log(`  Lower: ₹${retirementBasic.projectedCorpus.lower.toLocaleString()}`);
     }
     if (childEducationBasic) {
       console.log(`Child Education Basic: ${childEducationBasic.status} (${childEducationBasic.confidencePercent}%)`);
-      console.log(`  Target: ₹${childEducationBasic.targetAmount.toLocaleString()}`);
+      console.log(`  Target: ₹${childEducationBasic.targetAmountRange[1].toLocaleString()}`);
       console.log(`  Lower: ₹${childEducationBasic.projectedCorpus.lower.toLocaleString()}`);
     }
   });
@@ -179,12 +165,12 @@ describe('Corpus Redistribution Test', () => {
     console.log('\n=== Method 2 Results ===');
     if (retirementBasic) {
       console.log(`Retirement Basic: ${retirementBasic.status} (${retirementBasic.confidencePercent}%)`);
-      console.log(`  Target: ₹${retirementBasic.targetAmount.toLocaleString()}`);
+      console.log(`  Target: ₹${retirementBasic.targetAmountRange[1].toLocaleString()}`);
       console.log(`  Lower: ₹${retirementBasic.projectedCorpus.lower.toLocaleString()}`);
     }
     if (childEducationBasic) {
       console.log(`Child Education Basic: ${childEducationBasic.status} (${childEducationBasic.confidencePercent}%)`);
-      console.log(`  Target: ₹${childEducationBasic.targetAmount.toLocaleString()}`);
+      console.log(`  Target: ₹${childEducationBasic.targetAmountRange[1].toLocaleString()}`);
       console.log(`  Lower: ₹${childEducationBasic.projectedCorpus.lower.toLocaleString()}`);
     }
   });
@@ -287,13 +273,13 @@ describe('Corpus Redistribution Test', () => {
     console.log('\n=== Method 3 Results ===');
     if (retirementBasic) {
       console.log(`Retirement Basic: ${retirementBasic.status} (${retirementBasic.confidencePercent}%)`);
-      console.log(`  Target: ₹${retirementBasic.targetAmount.toLocaleString()}`);
+      console.log(`  Target: ₹${retirementBasic.targetAmountRange[1].toLocaleString()}`);
       console.log(`  Lower: ₹${retirementBasic.projectedCorpus.lower.toLocaleString()}`);
       console.log(`  Corpus Allocation:`, result.corpusAllocation['retirement']);
     }
     if (childEducationBasic) {
       console.log(`Child Education Basic: ${childEducationBasic.status} (${childEducationBasic.confidencePercent}%)`);
-      console.log(`  Target: ₹${childEducationBasic.targetAmount.toLocaleString()}`);
+      console.log(`  Target: ₹${childEducationBasic.targetAmountRange[1].toLocaleString()}`);
       console.log(`  Lower: ₹${childEducationBasic.projectedCorpus.lower.toLocaleString()}`);
       console.log(`  Corpus Allocation:`, result.corpusAllocation['child_education']);
     }

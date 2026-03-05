@@ -11,7 +11,7 @@ export interface MonthlyNetworthData {
 }
 
 export interface NetworthProjectionData {
-  method: "method1" | "method2" | "method3";
+  method: "method1" | "gharfin" | "method3";
   monthlyValues: MonthlyNetworthData[];
   maxMonth: number; // Until longest goal horizon
   metadata: {

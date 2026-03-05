@@ -109,8 +109,8 @@ describe('GoalSchema', () => {
     const invalid = {
       ...singleGoal,
       tiers: {
-        basic: { targetAmount: 5000000 },
-        ambitious: { targetAmount: 8000000, priority: 2 }
+        basic: { targetAmount: [4500000, 5000000] },
+        ambitious: { targetAmount: [7500000, 8000000], priority: 2 }
       }
     };
     const result = GoalSchema.safeParse(invalid);
@@ -121,8 +121,8 @@ describe('GoalSchema', () => {
     const invalid = {
       ...singleGoal,
       tiers: {
-        basic: { targetAmount: 5000000, priority: 1.5 },
-        ambitious: { targetAmount: 8000000, priority: 2 }
+        basic: { targetAmount: [4500000, 5000000], priority: 1.5 },
+        ambitious: { targetAmount: [7500000, 8000000], priority: 2 }
       }
     };
     const result = GoalSchema.safeParse(invalid);
@@ -133,8 +133,8 @@ describe('GoalSchema', () => {
     const invalid = {
       ...singleGoal,
       tiers: {
-        basic: { targetAmount: 5000000, priority: 0 },
-        ambitious: { targetAmount: 8000000, priority: 2 }
+        basic: { targetAmount: [4500000, 5000000], priority: 0 },
+        ambitious: { targetAmount: [7500000, 8000000], priority: 2 }
       }
     };
     const result = GoalSchema.safeParse(invalid);
@@ -147,8 +147,14 @@ describe('GoalSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('should reject invalid amountVariancePct (>100)', () => {
-    const invalid = { ...singleGoal, amountVariancePct: 150 };
+  it('should reject targetAmount range with max <= min', () => {
+    const invalid = {
+      ...singleGoal,
+      tiers: {
+        basic: { targetAmount: [5000000, 5000000], priority: 1 },
+        ambitious: { targetAmount: [7500000, 8000000], priority: 2 }
+      }
+    };
     const result = GoalSchema.safeParse(invalid);
     expect(result.success).toBe(false);
   });

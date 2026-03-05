@@ -1,5 +1,5 @@
 import { AssetClassData, AssetClasses, calculateAvgPositiveReturn } from "../models/AssetClass";
-import { getTimeHorizonKey, isInLast12Months } from "../utils/time";
+import { isInLast12Months } from "../utils/time";
 import { annualToMonthlyReturn } from "../utils/math";
 
 /**
@@ -160,12 +160,12 @@ export function getTimeBasedAllocation(
 }
 
 /**
- * Optimize asset allocation using Sharpe ratio maximization
+ * Optimize asset allocation using Sharpe ratio maximization.
+ * Uses single CAGR/volatility per asset class (no 3Y/5Y/10Y).
  */
 export function optimizeSharpeRatio(
   allowedAssetClasses: string[],
-  assetClasses: AssetClasses,
-  timeHorizon: "3Y" | "5Y" | "10Y"
+  assetClasses: AssetClasses
 ): AssetAllocation[] {
   // Get asset class data (exclude cash)
   const assetData: Array<{
@@ -181,13 +181,17 @@ export function optimizeSharpeRatio(
       continue;
     }
 
-    const data = assetClasses[assetClass]?.[timeHorizon];
+    const data = assetClasses[assetClass];
     if (data) {
       const return_ = data.avgReturnPct / 100;
-      // Approximate volatility from risk metrics for Sharpe ratio
-      const probNegative = data.probNegativeYearPct / 100;
-      const expectedShortfall = Math.abs(data.expectedShortfallPct) / 100;
-      const volatility = expectedShortfall * Math.sqrt(probNegative / (1 - probNegative || 0.01));
+      const volatility =
+        data.volatilityPct != null
+          ? data.volatilityPct / 100
+          : (() => {
+              const probNegative = data.probNegativeYearPct / 100;
+              const expectedShortfall = Math.abs(data.expectedShortfallPct) / 100;
+              return expectedShortfall * Math.sqrt(probNegative / (1 - probNegative || 0.01));
+            })();
       const sharpeRatio = volatility > 0 ? return_ / volatility : 0;
       assetData.push({ name: assetClass, return: return_, volatility, sharpeRatio });
     }
@@ -256,15 +260,10 @@ export function getOptimalAllocation(
   assetClasses: AssetClasses,
   currentMonth: number = 0
 ): AssetAllocation[] {
-  const timeHorizon = getTimeHorizonKey(goal.horizonYears);
   const totalMonths = goal.horizonYears * 12;
 
-  // Get base allocation using Sharpe optimization
-  const baseAllocation = optimizeSharpeRatio(
-    allowedAssetClasses,
-    assetClasses,
-    timeHorizon
-  );
+  // Get base allocation using Sharpe optimization (single CAGR per asset class)
+  const baseAllocation = optimizeSharpeRatio(allowedAssetClasses, assetClasses);
 
   // For basic goals, apply time-based shifts
   if (tier === "basic") {

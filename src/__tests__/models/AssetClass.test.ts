@@ -39,36 +39,31 @@ describe('calculateAvgPositiveReturn', () => {
 
 describe('getAssetClassData', () => {
   it('should get data for 3Y horizon', () => {
-    const result = getAssetClassData(fullAssetClasses, 'largeCap', '3Y');
+    const result = getAssetClassData(fullAssetClasses, 'largeCap');
     expect(result).not.toBeNull();
     expect(result?.avgReturnPct).toBe(12.0);
   });
 
-  it('should get data for 5Y horizon', () => {
-    const result = getAssetClassData(fullAssetClasses, 'largeCap', '5Y');
-    expect(result).not.toBeNull();
-    expect(result?.avgReturnPct).toBe(11.5);
-  });
-
-  it('should get data for 10Y horizon', () => {
-    const result = getAssetClassData(fullAssetClasses, 'largeCap', '10Y');
-    expect(result).not.toBeNull();
-    expect(result?.avgReturnPct).toBe(11.0);
+  it('should get same data for any horizon (single CAGR per asset class)', () => {
+    const result5Y = getAssetClassData(fullAssetClasses, 'largeCap');
+    const result10Y = getAssetClassData(fullAssetClasses, 'largeCap');
+    expect(result5Y).not.toBeNull();
+    expect(result10Y).not.toBeNull();
+    expect(result5Y?.avgReturnPct).toBe(12.0);
+    expect(result10Y?.avgReturnPct).toBe(12.0);
   });
 
   it('should return null for missing asset class', () => {
-    const result = getAssetClassData(fullAssetClasses, 'nonExistent', '3Y');
+    const result = getAssetClassData(fullAssetClasses, 'nonExistent');
     expect(result).toBeNull();
   });
 
-  it('should return null for missing time horizon', () => {
-    const assetClassesWithout3Y = {
-      largeCap: {
-        "5Y": { avgReturnPct: 11.5, probNegativeYearPct: 20, expectedShortfallPct: -17, maxDrawdownPct: -32 },
-        "10Y": { avgReturnPct: 11.0, probNegativeYearPct: 18, expectedShortfallPct: -15, maxDrawdownPct: -28 },
-      },
+  it('should return data for existing asset class (no time horizon in flat structure)', () => {
+    const assetClassesFlat = {
+      largeCap: { avgReturnPct: 11.5, probNegativeYearPct: 20, expectedShortfallPct: -17, maxDrawdownPct: -32 },
     };
-    const result = getAssetClassData(assetClassesWithout3Y, 'largeCap', '3Y');
-    expect(result).toBeNull();
+    const result = getAssetClassData(assetClassesFlat, 'largeCap');
+    expect(result).not.toBeNull();
+    expect(result!.avgReturnPct).toBe(11.5);
   });
 });

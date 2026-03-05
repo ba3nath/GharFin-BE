@@ -497,10 +497,9 @@ export function runMultiGoalPortfolioMonteCarloLite(
             )
           : baseAllocation;
 
-        const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
         const assetClassDataMap: Record<string, AssetClassData> = {};
         for (const alloc of assetAllocation) {
-          const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+          const data = getAssetClassData(assetClasses, alloc.assetClass);
           if (data) assetClassDataMap[alloc.assetClass] = data;
         }
 

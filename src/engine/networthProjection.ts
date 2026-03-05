@@ -1,4 +1,4 @@
-import { PlanningResult, Method1Result, Method2Result, Method3Result } from "../models/PlanningResult";
+import { PlanningResult, Method1Result, GharFinResult, Method3Result } from "../models/PlanningResult";
 import { Goal, getGoalTarget } from "../models/Goal";
 import { CustomerProfile, getTotalCorpus } from "../models/CustomerProfile";
 import { AssetClasses, getAssetClassData } from "../models/AssetClass";
@@ -13,7 +13,7 @@ import { annualToMonthlyReturn } from "../utils/math";
  * @param tier - "basic" to withdraw basic tier corpus, "ambitious" to withdraw ambitious tier corpus
  */
 export function calculateNetworthProjection(
-  method: "method1" | "method2" | "method3",
+  method: "method1" | "gharfin" | "method3",
   planningResult: PlanningResult,
   goals: Goal[],
   customerProfile: CustomerProfile,
@@ -147,13 +147,10 @@ export function calculateNetworthProjection(
           )
         : baseAllocation;
       
-      // Get time horizon for asset class data
-      const timeHorizon = goal.horizonYears <= 3 ? "3Y" : goal.horizonYears <= 5 ? "5Y" : "10Y";
-      
-      // Build asset class data map
+      // Build asset class data map (same data for all horizons)
       const assetClassDataMap: Record<string, any> = {};
       for (const alloc of assetAllocation) {
-        const data = getAssetClassData(assetClasses, alloc.assetClass, timeHorizon);
+        const data = getAssetClassData(assetClasses, alloc.assetClass);
         if (data) {
           assetClassDataMap[alloc.assetClass] = data;
         }

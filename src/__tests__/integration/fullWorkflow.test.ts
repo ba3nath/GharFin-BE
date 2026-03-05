@@ -144,7 +144,7 @@ describe('Full Method 2 Workflow', () => {
     const result = planner.planMethod2(100); // Use fewer paths for faster test
 
     // Verify all outputs present
-    expect(result.method).toBe('method2');
+    expect(result.method).toBe('gharfin');
     expect(result.goalFeasibilityTable).toBeDefined();
     expect(result.sipAllocation).toBeDefined();
     expect(result.sipAllocationSchedule).toBeDefined();
@@ -220,7 +220,7 @@ describe('Method Comparison', () => {
 
     // Both should have same structure
     expect(method1Result.method).toBe('method1');
-    expect(method2Result.method).toBe('method2');
+    expect(method2Result.method).toBe('gharfin');
 
     // Both should have feasibility tables with at least one row per goal (basic tier always present)
     const goalCount = goals.goals.length;

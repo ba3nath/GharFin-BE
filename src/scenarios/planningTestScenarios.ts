@@ -125,10 +125,9 @@ const retirement30Y: Goal = {
   goalId: "retirement_30y",
   goalName: "Retirement",
   horizonYears: 30,
-  amountVariancePct: 20,
   tiers: {
-    basic: { targetAmount: 30000000, priority: 1 }, // ₹3 Cr
-    ambitious: { targetAmount: 45000000, priority: 2 }, // ₹4.5 Cr
+    basic: { targetAmount: [27000000, 30000000], priority: 1 }, // ₹3 Cr
+    ambitious: { targetAmount: [40000000, 45000000], priority: 2 }, // ₹4.5 Cr
   },
 };
 
@@ -136,10 +135,9 @@ const retirement40Y: Goal = {
   goalId: "retirement_40y",
   goalName: "Ultra-long Retirement",
   horizonYears: 40,
-  amountVariancePct: 25,
   tiers: {
-    basic: { targetAmount: 50000000, priority: 1 }, // ₹5 Cr
-    ambitious: { targetAmount: 80000000, priority: 2 }, // ₹8 Cr
+    basic: { targetAmount: [45000000, 50000000], priority: 1 }, // ₹5 Cr
+    ambitious: { targetAmount: [72000000, 80000000], priority: 2 }, // ₹8 Cr
   },
 };
 
@@ -147,10 +145,9 @@ const education12Y: Goal = {
   goalId: "education_12y",
   goalName: "Child Higher Education",
   horizonYears: 12,
-  amountVariancePct: 15,
   tiers: {
-    basic: { targetAmount: 2500000, priority: 2 }, // ₹25L
-    ambitious: { targetAmount: 4000000, priority: 3 }, // ₹40L
+    basic: { targetAmount: [2200000, 2500000], priority: 2 }, // ₹25L
+    ambitious: { targetAmount: [3600000, 4000000], priority: 3 }, // ₹40L
   },
 };
 
@@ -158,10 +155,9 @@ const car3Y: Goal = {
   goalId: "car_3y",
   goalName: "Car Purchase",
   horizonYears: 3,
-  amountVariancePct: 10,
   tiers: {
-    basic: { targetAmount: 1200000, priority: 3 }, // ₹12L
-    ambitious: { targetAmount: 1800000, priority: 4 }, // ₹18L
+    basic: { targetAmount: [1100000, 1200000], priority: 3 }, // ₹12L
+    ambitious: { targetAmount: [1600000, 1800000], priority: 4 }, // ₹18L
   },
 };
 
@@ -169,10 +165,9 @@ const emergency1Y: Goal = {
   goalId: "emergency_1y",
   goalName: "Emergency Fund",
   horizonYears: 1,
-  amountVariancePct: 0,
   tiers: {
-    basic: { targetAmount: 600000, priority: 1 }, // ₹6L (approx 6 months expenses)
-    ambitious: { targetAmount: 900000, priority: 2 },
+    basic: { targetAmount: [540000, 600000], priority: 1 }, // ₹6L (approx 6 months expenses)
+    ambitious: { targetAmount: [810000, 900000], priority: 2 },
   },
 };
 
@@ -180,10 +175,9 @@ const medical5Y: Goal = {
   goalId: "medical_5y",
   goalName: "Medical Corpus",
   horizonYears: 5,
-  amountVariancePct: 10,
   tiers: {
-    basic: { targetAmount: 1500000, priority: 2 }, // ₹15L
-    ambitious: { targetAmount: 2500000, priority: 3 }, // ₹25L
+    basic: { targetAmount: [1350000, 1500000], priority: 2 }, // ₹15L
+    ambitious: { targetAmount: [2200000, 2500000], priority: 3 }, // ₹25L
   },
 };
 
@@ -191,10 +185,9 @@ const house10Y: Goal = {
   goalId: "house_10y",
   goalName: "House Purchase",
   horizonYears: 10,
-  amountVariancePct: 15,
   tiers: {
-    basic: { targetAmount: 5000000, priority: 2 }, // ₹50L
-    ambitious: { targetAmount: 8000000, priority: 3 }, // ₹80L
+    basic: { targetAmount: [4500000, 5000000], priority: 2 }, // ₹50L
+    ambitious: { targetAmount: [7200000, 8000000], priority: 3 }, // ₹80L
   },
 };
 
@@ -202,10 +195,9 @@ const vacation3Y: Goal = {
   goalId: "vacation_3y",
   goalName: "Vacation",
   horizonYears: 3,
-  amountVariancePct: 10,
   tiers: {
-    basic: { targetAmount: 300000, priority: 4 }, // ₹3L
-    ambitious: { targetAmount: 500000, priority: 5 }, // ₹5L
+    basic: { targetAmount: [270000, 300000], priority: 4 }, // ₹3L
+    ambitious: { targetAmount: [450000, 500000], priority: 5 }, // ₹5L
   },
 };
 
@@ -213,10 +205,9 @@ const impossible5Y: Goal = {
   goalId: "impossible_5y",
   goalName: "Aspirational Mansion",
   horizonYears: 5,
-  amountVariancePct: 0,
   tiers: {
-    basic: { targetAmount: 100000000, priority: 1 }, // ₹10 Cr in 5Y
-    ambitious: { targetAmount: 150000000, priority: 2 },
+    basic: { targetAmount: [90000000, 100000000], priority: 1 }, // ₹10 Cr in 5Y
+    ambitious: { targetAmount: [135000000, 150000000], priority: 2 },
   },
 };
 

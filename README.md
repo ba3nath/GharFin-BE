@@ -235,7 +235,7 @@ Note: The test script requires `jq` for JSON formatting. Install it with `brew i
 - **API/CLI request** (validated by `src/utils/validation.ts`):
   - **`assets`** → `AssetsConfig` (`src/models/AssetsConfig.ts`): `benchmark` + `mutual_fund_categories` (return/volatility ranges, bucket). Normalized to `AssetClasses` per profile (conservative/realistic/aggressive).
   - **`customer_profile`** → `CustomerProfileInput` (`src/models/CustomerProfileInput.ts`): `financials`, `stability`, `risk_tolerance`, `liquidity_preferences`, optional `profile_type`. Mapped to internal `CustomerProfile` (corpus, allowed asset classes, etc.).
-  - **`goals`** → `GoalsSchema`: array of goals; each goal has `goalId`, `goalName`, `horizonYears`, `amountVariancePct`, optional `profile_type`, and `tiers.basic` / `tiers.ambitious` with `targetAmount` and `priority`.
+  - **`goals`** → `GoalsSchema`: array of goals; each goal has `goalId`, `goalName`, `horizonYears`, optional `profile_type`, and `tiers.basic` / `tiers.ambitious` with `targetAmount` (range `[min, max]`, strict ordering) and `priority`.
   - **SIP params**: `monthlySIP`, optional `stretchSIPPercent`, `annualStepUpPercent`; Method 2/3 optional `monteCarloPaths`, `maxIterations`.
 
 Internal models used by the planner (in `src/models/`): `Goal`, `CustomerProfile`, `AssetClass` / `AssetClasses`, plus envelope/portfolio types.
@@ -243,7 +243,7 @@ Internal models used by the planner (in `src/models/`): `Goal`, `CustomerProfile
 ### Reporting and output modules
 
 - **Structured result** (`src/models/PlanningResult.ts`): `Method1Result` | `Method2Result` | `Method3Result` — each includes:
-  - **Goal feasibility** → `GoalFeasibilityTable` (`src/models/GoalFeasibilityTable.ts`): rows with goal/tier, status (`can_be_met` | `at_risk` | `cannot_be_met`), confidence %, target, projected corpus (lower/mean).
+  - **Goal feasibility** → `GoalFeasibilityTable` (`src/models/GoalFeasibilityTable.ts`): rows with goal/tier, status (`can_be_met` | `at_risk` | `cannot_be_met`), confidence %, `targetAmountRange` [min, max], projected corpus (lower/mean).
   - **SIP allocation** → `SIPPlan` (`src/models/SIPPlan.ts`): first-month allocation % by goal/tier/asset.
   - **SIP schedule** → `SIPAllocationSchedule` (`src/models/SIPAllocationSchedule.ts`): snapshots over time (e.g. step-up events).
   - **Corpus allocation** → `Record<goalId, Record<assetClass, amount>>`.

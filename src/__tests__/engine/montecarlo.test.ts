@@ -20,7 +20,7 @@ describe('runPortfolioMonteCarloSimulationLognormal', () => {
   ];
 
   const assetClassDataMap = {
-    largeCap: fullAssetClasses.largeCap['10Y']!,
+    largeCap: fullAssetClasses.largeCap!,
   };
 
   const initialCorpusByAssetClass = {
@@ -49,7 +49,7 @@ describe('runPortfolioMonteCarloSimulationLognormal', () => {
 
   it('should throw error if volatilityPct missing', () => {
     const dataWithoutVolatility = {
-      ...fullAssetClasses.largeCap['10Y']!,
+      ...fullAssetClasses.largeCap!,
     };
     delete (dataWithoutVolatility as any).volatilityPct;
     
@@ -106,8 +106,8 @@ describe('runPortfolioMonteCarloSimulationLognormal', () => {
     ];
 
     const multiAssetDataMap = {
-      largeCap: fullAssetClasses.largeCap['10Y']!,
-      bond: fullAssetClasses.bond['10Y']!,
+      largeCap: fullAssetClasses.largeCap!,
+      bond: fullAssetClasses.bond!,
     };
 
     const multiInitialCorpus = {
@@ -232,7 +232,7 @@ describe('calculateRequiredSIPMonteCarlo', () => {
   ];
 
   const assetClassDataMap = {
-    largeCap: fullAssetClasses.largeCap['10Y']!,
+    largeCap: fullAssetClasses.largeCap!,
   };
 
   const initialCorpusByAssetClass = {
@@ -270,7 +270,7 @@ describe('calculateRequiredSIPMonteCarlo', () => {
 
   it('should throw error if volatilityPct missing', () => {
     const dataWithoutVolatility = {
-      ...fullAssetClasses.largeCap['10Y']!,
+      ...fullAssetClasses.largeCap!,
     };
     delete (dataWithoutVolatility as any).volatilityPct;
 
@@ -310,7 +310,7 @@ describe('calculateMinimumSIPForConfidenceMonteCarlo', () => {
   ];
 
   const assetClassDataMap = {
-    largeCap: fullAssetClasses.largeCap['10Y']!,
+    largeCap: fullAssetClasses.largeCap!,
   };
 
   const initialCorpusByAssetClass = {
@@ -369,7 +369,7 @@ describe('validateEnvelope', () => {
   ];
 
   const assetClassDataMap = {
-    largeCap: fullAssetClasses.largeCap['10Y']!,
+    largeCap: fullAssetClasses.largeCap!,
   };
 
   const envelopeBounds: EnvelopeBounds = {

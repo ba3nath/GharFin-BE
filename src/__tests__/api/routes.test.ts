@@ -11,8 +11,8 @@ describe('GET /api', () => {
     expect(response.status).toBe(200);
     expect(response.body.message).toBeDefined();
     expect(response.body.endpoints).toBeDefined();
-    expect(response.body.endpoints.method1).toBeDefined();
-    expect(response.body.endpoints.method2).toBeDefined();
+    expect(response.body.endpoints.gharfin).toBeDefined();
+    expect(response.body.endpoints.method2).toBeDefined(); // deprecated alias
   });
 });
 
@@ -26,98 +26,46 @@ describe('GET /api/health', () => {
   });
 });
 
-describe('GET /api/plan/method1', () => {
+describe('GET /api/plan/gharfin', () => {
   it('should return method information', async () => {
-    const response = await request(app).get('/api/plan/method1');
+    const response = await request(app).get('/api/plan/gharfin');
     
     expect(response.status).toBe(200);
     expect(response.body.method).toBe('POST');
-    expect(response.body.endpoint).toBe('/api/plan/method1');
+    expect(response.body.endpoint).toBe('/api/plan/gharfin');
     expect(response.body.requiredFields).toBeDefined();
   });
 });
 
-describe('GET /api/plan/method2', () => {
-  it('should return method information', async () => {
+describe('GET /api/plan/method2 (deprecated)', () => {
+  it('should return deprecated info', async () => {
     const response = await request(app).get('/api/plan/method2');
     
     expect(response.status).toBe(200);
-    expect(response.body.method).toBe('POST');
     expect(response.body.endpoint).toBe('/api/plan/method2');
-    expect(response.body.requiredFields).toBeDefined();
   });
 });
 
-describe('POST /api/plan/method1', () => {
-  it('should return success with valid request', async () => {
-    const response = await request(app)
-      .post('/api/plan/method1')
-      .send(minimalValidRequest);
-    
-    expect(response.status).toBe(200);
-    expect(response.body.method).toBe('method1');
-    expect(response.body.goalFeasibilityTable).toBeDefined();
-    expect(response.body.sipAllocation).toBeDefined();
-    expect(response.body.corpusAllocation).toBeDefined();
-  });
-
-  it('should return 400 for invalid request', async () => {
-    const response = await request(app)
-      .post('/api/plan/method1')
-      .send({});
-    
-    expect(response.status).toBe(400);
-    expect(response.body.error).toBeDefined();
-  });
-
-  it('should return 400 for missing fields', async () => {
-    const response = await request(app)
-      .post('/api/plan/method1')
-      .send({
-        assets: minimalValidRequest.assets,
-        // Missing customer_profile, goals, monthlySIP
-      });
-    
-    expect(response.status).toBe(400);
-  });
-
-  it('should handle stretch SIP and step-up', async () => {
-    const requestWithOptions = {
-      ...minimalValidRequest,
-      stretchSIPPercent: 20,
-      annualStepUpPercent: 10,
-    };
-
-    const response = await request(app)
-      .post('/api/plan/method1')
-      .send(requestWithOptions);
-    
-    expect(response.status).toBe(200);
-    expect(response.body.method).toBe('method1');
-  });
-
-});
-
-describe('POST /api/plan/method2', () => {
+describe('POST /api/plan/gharfin', () => {
   it('should return success with valid request (with volatilityPct)', async () => {
     const requestWithPaths = {
       ...minimalValidRequest,
-      monteCarloPaths: 100, // Use fewer paths for faster test
+      monteCarloPaths: 100,
     };
     
     const response = await request(app)
-      .post('/api/plan/method2')
+      .post('/api/plan/gharfin')
       .send(requestWithPaths);
     
     expect(response.status).toBe(200);
-    expect(response.body.method).toBe('method2');
+    expect(response.body.method).toBe('gharfin');
     expect(response.body.goalFeasibilityTable).toBeDefined();
     expect(response.body.sipAllocation).toBeDefined();
-  }, 30000); // Method 2 with Monte Carlo can take 15-20+ seconds
+  }, 30000);
 
   it('should return 400 for invalid request', async () => {
     const response = await request(app)
-      .post('/api/plan/method2')
+      .post('/api/plan/gharfin')
       .send({});
     
     expect(response.status).toBe(400);
@@ -130,18 +78,33 @@ describe('POST /api/plan/method2', () => {
     };
 
     const response = await request(app)
+      .post('/api/plan/gharfin')
+      .send(requestWithPaths);
+    
+    expect(response.status).toBe(200);
+  }, 30000);
+});
+
+describe('POST /api/plan/method2 (deprecated, same as gharfin)', () => {
+  it('should return gharfin result', async () => {
+    const requestWithPaths = {
+      ...minimalValidRequest,
+      monteCarloPaths: 100,
+    };
+    
+    const response = await request(app)
       .post('/api/plan/method2')
       .send(requestWithPaths);
     
     expect(response.status).toBe(200);
-  }, 30000); // Method 2 with Monte Carlo can take time
-
+    expect(response.body.method).toBe('gharfin');
+  }, 30000);
 });
 
 describe('POST /api/validate', () => {
   it('should validate envelope bounds', async () => {
     const assetClasses = assetsConfigToAssetClasses(minimalAssetsConfig, 'realistic');
-    const largeCapData = assetClasses['Large Cap Fund']?.['10Y'];
+    const largeCapData = assetClasses['Large Cap Fund'];
     const validateRequest = {
       initialCorpus: 1000000,
       monthlySIP: 50000,
@@ -179,7 +142,7 @@ describe('POST /api/validate', () => {
 describe('Error Handling', () => {
   it('should return 400 for bad requests', async () => {
     const response = await request(app)
-      .post('/api/plan/method1')
+      .post('/api/plan/gharfin')
       .send({ invalid: 'data' });
     
     expect(response.status).toBe(400);
@@ -188,7 +151,7 @@ describe('Error Handling', () => {
 
   it('should return 400 for invalid payload', async () => {
     const response = await request(app)
-      .post('/api/plan/method1')
+      .post('/api/plan/gharfin')
       .send({
         assets: null,
         customer_profile: null,
@@ -208,7 +171,7 @@ describe('Zod validation - invalid but present payloads', () => {
       monthlySIP: -1000,
     };
     const response = await request(app)
-      .post('/api/plan/method1')
+      .post('/api/plan/gharfin')
       .send(invalidRequest);
     
     expect(response.status).toBe(400);
@@ -224,7 +187,7 @@ describe('Zod validation - invalid but present payloads', () => {
       goals: { goals: 'not-an-array' },
     };
     const response = await request(app)
-      .post('/api/plan/method1')
+      .post('/api/plan/gharfin')
       .send(invalidRequest);
     
     expect(response.status).toBe(400);
@@ -239,7 +202,7 @@ describe('Zod validation - invalid but present payloads', () => {
       stretchSIPPercent: 150,
     };
     const response = await request(app)
-      .post('/api/plan/method1')
+      .post('/api/plan/gharfin')
       .send(invalidRequest);
     
     expect(response.status).toBe(400);

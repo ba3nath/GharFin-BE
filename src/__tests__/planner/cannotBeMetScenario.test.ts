@@ -75,10 +75,10 @@ describe('Cannot Be Met Scenario Test', () => {
       if (basicRow && ambitiousRow) {
         console.log(`\n${basicRow.goalName}:`);
         console.log(`  Basic: ${basicRow.status} (${basicRow.confidencePercent}%)`);
-        console.log(`    Target: ₹${basicRow.targetAmount.toLocaleString()}`);
+        console.log(`    Target: ₹${basicRow.targetAmountRange[1].toLocaleString()}`);
         console.log(`    Portfolio Mean: ₹${ambitiousRow.portfolioProjectedCorpus?.mean?.toLocaleString() || 'N/A'}`);
         console.log(`  Ambitious: ${ambitiousRow.status} (${ambitiousRow.confidencePercent}%)`);
-        console.log(`    Target: ₹${ambitiousRow.targetAmount.toLocaleString()}`);
+        console.log(`    Target: ₹${ambitiousRow.targetAmountRange[1].toLocaleString()}`);
         console.log(`    Portfolio Mean: ₹${ambitiousRow.portfolioProjectedCorpus?.mean?.toLocaleString() || 'N/A'}`);
       }
     });
@@ -124,10 +124,10 @@ describe('Cannot Be Met Scenario Test', () => {
       if (basicRow && ambitiousRow) {
         console.log(`\n${basicRow.goalName}:`);
         console.log(`  Basic: ${basicRow.status} (${basicRow.confidencePercent}%)`);
-        console.log(`    Target: ₹${basicRow.targetAmount.toLocaleString()}`);
+        console.log(`    Target: ₹${basicRow.targetAmountRange[1].toLocaleString()}`);
         console.log(`    Portfolio Mean: ₹${ambitiousRow.portfolioProjectedCorpus?.mean?.toLocaleString() || 'N/A'}`);
         console.log(`  Ambitious: ${ambitiousRow.status} (${ambitiousRow.confidencePercent}%)`);
-        console.log(`    Target: ₹${ambitiousRow.targetAmount.toLocaleString()}`);
+        console.log(`    Target: ₹${ambitiousRow.targetAmountRange[1].toLocaleString()}`);
         console.log(`    Portfolio Mean: ₹${ambitiousRow.portfolioProjectedCorpus?.mean?.toLocaleString() || 'N/A'}`);
       }
     });

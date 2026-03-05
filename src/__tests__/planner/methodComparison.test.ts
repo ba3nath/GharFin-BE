@@ -34,29 +34,13 @@ describe('Method Comparison Tests', () => {
      * - Envelope method is less conservative than Monte Carlo in this scenario
      */
     const assetClassesForMethod1: AssetClasses = {
-      largeCap: {
-        "3Y": { avgReturnPct: 12.0, probNegativeYearPct: 15, expectedShortfallPct: -12, maxDrawdownPct: -25, volatilityPct: 18.0 },
-        "5Y": { avgReturnPct: 11.5, probNegativeYearPct: 12, expectedShortfallPct: -10, maxDrawdownPct: -22, volatilityPct: 16.0 },
-        "10Y": { avgReturnPct: 11.0, probNegativeYearPct: 10, expectedShortfallPct: -8, maxDrawdownPct: -20, volatilityPct: 14.0 },
-      },
-      bond: {
-        "3Y": { avgReturnPct: 7.0, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 4.0 },
-        "5Y": { avgReturnPct: 7.2, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 4.0 },
-        "10Y": { avgReturnPct: 7.5, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 4.0 },
-      },
+      largeCap: { avgReturnPct: 12.0, probNegativeYearPct: 15, expectedShortfallPct: -12, maxDrawdownPct: -25, volatilityPct: 18.0 },
+      bond: { avgReturnPct: 7.0, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 4.0 },
     };
 
     const assetClassesWithVolatility: AssetClasses = {
-      largeCap: {
-        "3Y": { avgReturnPct: 12.0, probNegativeYearPct: 15, expectedShortfallPct: -12, maxDrawdownPct: -25, volatilityPct: 18.0 },
-        "5Y": { avgReturnPct: 11.5, probNegativeYearPct: 12, expectedShortfallPct: -10, maxDrawdownPct: -22, volatilityPct: 16.0 },
-        "10Y": { avgReturnPct: 11.0, probNegativeYearPct: 10, expectedShortfallPct: -8, maxDrawdownPct: -20, volatilityPct: 14.0 },
-      },
-      bond: {
-        "3Y": { avgReturnPct: 7.0, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 4.0 },
-        "5Y": { avgReturnPct: 7.2, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 4.0 },
-        "10Y": { avgReturnPct: 7.5, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 4.0 },
-      },
+      largeCap: { avgReturnPct: 12.0, probNegativeYearPct: 15, expectedShortfallPct: -12, maxDrawdownPct: -25, volatilityPct: 18.0 },
+      bond: { avgReturnPct: 7.0, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 4.0 },
     };
 
     const goals: Goal[] = [
@@ -64,10 +48,9 @@ describe('Method Comparison Tests', () => {
         goalId: 'retirement',
         goalName: 'Retirement',
         horizonYears: 10,
-        amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 5000000, priority: 1 }, // 50L target
-          ambitious: { targetAmount: 7000000, priority: 2 },
+          basic: { targetAmount: [4500000, 5000000], priority: 1 }, // 50L target
+          ambitious: { targetAmount: [6300000, 7000000], priority: 2 },
         },
       },
     ];
@@ -134,21 +117,21 @@ describe('Method Comparison Tests', () => {
       console.log('\n=== Method 1 Results ===');
       if (method1Retirement) {
         console.log(`Retirement Basic: ${method1Retirement.status} (${method1Retirement.confidencePercent}%)`);
-        console.log(`  Target: ₹${method1Retirement.targetAmount.toLocaleString()}`);
+        console.log(`  Target: ₹${method1Retirement.targetAmountRange[1].toLocaleString()}`);
         console.log(`  Lower: ₹${method1Retirement.projectedCorpus.lower.toLocaleString()}`);
       }
 
       console.log('\n=== Method 2 Results ===');
       if (method2Retirement) {
         console.log(`Retirement Basic: ${method2Retirement.status} (${method2Retirement.confidencePercent}%)`);
-        console.log(`  Target: ₹${method2Retirement.targetAmount.toLocaleString()}`);
+        console.log(`  Target: ₹${method2Retirement.targetAmountRange[1].toLocaleString()}`);
         console.log(`  Lower: ₹${method2Retirement.projectedCorpus.lower.toLocaleString()}`);
       }
 
       console.log('\n=== Method 3 Results ===');
       if (method3Retirement) {
         console.log(`Retirement Basic: ${method3Retirement.status} (${method3Retirement.confidencePercent}%)`);
-        console.log(`  Target: ₹${method3Retirement.targetAmount.toLocaleString()}`);
+        console.log(`  Target: ₹${method3Retirement.targetAmountRange[1].toLocaleString()}`);
         console.log(`  Lower: ₹${method3Retirement.projectedCorpus.lower.toLocaleString()}`);
       }
 
@@ -189,21 +172,9 @@ describe('Method Comparison Tests', () => {
      * - Envelope method is too optimistic in this scenario
      */
     const assetClassesForMethod2: AssetClasses = {
-      largeCap: {
-        "3Y": { avgReturnPct: 12.0, probNegativeYearPct: 25, expectedShortfallPct: -20, maxDrawdownPct: -40, volatilityPct: 22.0 },
-        "5Y": { avgReturnPct: 11.5, probNegativeYearPct: 23, expectedShortfallPct: -18, maxDrawdownPct: -38, volatilityPct: 20.0 },
-        "10Y": { avgReturnPct: 11.0, probNegativeYearPct: 20, expectedShortfallPct: -16, maxDrawdownPct: -35, volatilityPct: 18.0 },
-      },
-      midCap: {
-        "3Y": { avgReturnPct: 15.0, probNegativeYearPct: 30, expectedShortfallPct: -28, maxDrawdownPct: -50, volatilityPct: 28.0 },
-        "5Y": { avgReturnPct: 14.0, probNegativeYearPct: 28, expectedShortfallPct: -26, maxDrawdownPct: -48, volatilityPct: 26.0 },
-        "10Y": { avgReturnPct: 13.0, probNegativeYearPct: 25, expectedShortfallPct: -24, maxDrawdownPct: -45, volatilityPct: 24.0 },
-      },
-      bond: {
-        "3Y": { avgReturnPct: 6.5, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 5.0 },
-        "5Y": { avgReturnPct: 6.8, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 5.0 },
-        "10Y": { avgReturnPct: 7.0, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 5.0 },
-      },
+      largeCap: { avgReturnPct: 12.0, probNegativeYearPct: 25, expectedShortfallPct: -20, maxDrawdownPct: -40, volatilityPct: 22.0 },
+      midCap: { avgReturnPct: 15.0, probNegativeYearPct: 30, expectedShortfallPct: -28, maxDrawdownPct: -50, volatilityPct: 28.0 },
+      bond: { avgReturnPct: 6.5, probNegativeYearPct: 0, expectedShortfallPct: 0, maxDrawdownPct: 0, volatilityPct: 5.0 },
     };
 
     const goals: Goal[] = [
@@ -211,10 +182,9 @@ describe('Method Comparison Tests', () => {
         goalId: 'retirement',
         goalName: 'Retirement',
         horizonYears: 10,
-        amountVariancePct: 5,
         tiers: {
-          basic: { targetAmount: 6000000, priority: 1 }, // 60L target
-          ambitious: { targetAmount: 9000000, priority: 2 },
+          basic: { targetAmount: [5400000, 6000000], priority: 1 }, // 60L target
+          ambitious: { targetAmount: [8100000, 9000000], priority: 2 },
         },
       },
     ];
@@ -282,21 +252,21 @@ describe('Method Comparison Tests', () => {
       console.log('\n=== Method 1 Results ===');
       if (method1Retirement) {
         console.log(`Retirement Basic: ${method1Retirement.status} (${method1Retirement.confidencePercent}%)`);
-        console.log(`  Target: ₹${method1Retirement.targetAmount.toLocaleString()}`);
+        console.log(`  Target: ₹${method1Retirement.targetAmountRange[1].toLocaleString()}`);
         console.log(`  Lower: ₹${method1Retirement.projectedCorpus.lower.toLocaleString()}`);
       }
 
       console.log('\n=== Method 2 Results ===');
       if (method2Retirement) {
         console.log(`Retirement Basic: ${method2Retirement.status} (${method2Retirement.confidencePercent}%)`);
-        console.log(`  Target: ₹${method2Retirement.targetAmount.toLocaleString()}`);
+        console.log(`  Target: ₹${method2Retirement.targetAmountRange[1].toLocaleString()}`);
         console.log(`  Lower: ₹${method2Retirement.projectedCorpus.lower.toLocaleString()}`);
       }
 
       console.log('\n=== Method 3 Results ===');
       if (method3Retirement) {
         console.log(`Retirement Basic: ${method3Retirement.status} (${method3Retirement.confidencePercent}%)`);
-        console.log(`  Target: ₹${method3Retirement.targetAmount.toLocaleString()}`);
+        console.log(`  Target: ₹${method3Retirement.targetAmountRange[1].toLocaleString()}`);
         console.log(`  Lower: ₹${method3Retirement.projectedCorpus.lower.toLocaleString()}`);
       }
 

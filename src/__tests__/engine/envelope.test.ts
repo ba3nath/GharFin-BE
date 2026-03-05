@@ -88,8 +88,8 @@ describe('calculatePortfolioEnvelopeBounds', () => {
   ];
 
   const assetClassDataMap = {
-    largeCap: fullAssetClasses.largeCap['10Y']!,
-    bond: fullAssetClasses.bond['10Y']!,
+    largeCap: fullAssetClasses.largeCap!,
+    bond: fullAssetClasses.bond!,
   };
 
   it('should calculate bounds with multiple asset classes', () => {

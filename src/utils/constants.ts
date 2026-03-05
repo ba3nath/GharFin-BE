@@ -12,11 +12,11 @@ export const DEFAULT_MAX_ITERATIONS = 20;
 /** Goals with horizon strictly below this (years) are short-term; SIP is not allocated. */
 export const SHORT_TERM_HORIZON_YEARS = 3;
 
-/** Confidence percent at or above this is "can_be_met" for basic tier. */
-export const CONFIDENCE_CAN_BE_MET = 90;
+/** Confidence percent at or above this is "can_be_met" for basic tier (GharFin method). */
+export const CONFIDENCE_CAN_BE_MET = 95;
 
-/** Target confidence for corpus reclaim - slightly below 90% to avoid overshooting from rounding. */
-export const CORPUS_RECLAIM_TARGET_CONFIDENCE = 89;
+/** Target confidence for corpus reclaim - slightly below 95% to avoid overshooting from rounding. */
+export const CORPUS_RECLAIM_TARGET_CONFIDENCE = 94;
 
 /** Confidence percent at or above this (and below CONFIDENCE_CAN_BE_MET) is "at_risk". */
 export const CONFIDENCE_AT_RISK_MIN = 50;
